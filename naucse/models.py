@@ -926,6 +926,7 @@ class Root(Model):
         schema_url_factory=None,
         arca=None,
         trusted_repo_patterns=(),
+        repo_info=None,
     ):
         self.root = self
         self.url_factories = url_factories or {}
@@ -938,6 +939,8 @@ class Root(Model):
         self.run_years = {}
         self.licenses = {}
         self.self_study_courses = {}
+
+        self.set_repo_info(repo_info or get_local_repo_info('.'))
 
         # For pagination of runs
         # XXX: This shouldn't be necessary
@@ -955,13 +958,20 @@ class Root(Model):
         DictConverter(License),
         doc="""Allowed licenses""")
 
+    def set_repo_info(self, repo_info):
+        self.repo_info = repo_info
+
+        self.edit_info = self.repo_info.get_edit_info('.')
+        self.runs_edit_info = self.repo_info.get_edit_info('runs')
+        self.course_edit_info = self.repo_info.get_edit_info('courses')
+
     def load_local_courses(self, path):
         """Load local courses and lessons from the given path
 
         Note: Licenses should be loaded before calling load_local_courses,
         otherwise lessons will have no licences to choose from
         """
-        self.repo_info = get_local_repo_info(path)
+        self.set_repo_info(get_local_repo_info(path))
 
         self_study_course_path = path / 'courses'
         run_path = path / 'runs'
@@ -1022,10 +1032,6 @@ class Root(Model):
             self.featured_courses = [
                 self.courses[f'courses/{n}'] for n in course_info['order']
             ]
-
-        self.edit_info = self.repo_info.get_edit_info('.')
-        self.runs_edit_info = self.repo_info.get_edit_info('runs')
-        self.course_edit_info = self.repo_info.get_edit_info('courses')
 
     def add_course(self, course):
         slug = course.slug
