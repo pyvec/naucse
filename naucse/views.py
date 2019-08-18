@@ -46,7 +46,7 @@ def _get_model():
 
     load_path = Path(os.environ.get('NAUCSE_ROOT_PATH', '.'))
 
-    g.model.load_licenses(Path(app.root_path).parent / 'licenses')
+    g.model.load_licenses(Path(app.root_path) / 'licenses')
     g.model.load_local_courses(load_path)
 
     if freezing:

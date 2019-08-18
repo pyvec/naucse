@@ -27,5 +27,6 @@ setup(
         'lxml',
         'naucse-render',
     ],
+    include_package_data=True,
     zip_safe=False,
 )

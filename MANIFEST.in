@@ -1,0 +1,3 @@
+recursive-include naucse/static *
+recursive-include naucse/templates *
+recursive-include naucse/licenses *
