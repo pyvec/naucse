@@ -32,7 +32,6 @@ class NoURL(LookupError):
 class NoURLType(NoURL):
     """The requested URL type is not available"""
 
-
 class URLConverter(BaseConverter):
     def load(self, data, context):
         return sanitize.convert_link('href', data)
@@ -976,11 +975,6 @@ class Root(Model):
         self_study_course_path = path / 'courses'
         run_path = path / 'runs'
         lesson_path = path / 'lessons'
-
-        if not lesson_path.exists():
-            # At least one of 'runs' or 'courses' should exist for any courses
-            # to be loaded. But "lessons" needs to exist either way.
-            raise FileNotFoundError(lesson_path)
 
         def _load_local_course(course_path, slug, canonical_if_local=False):
             link_path = course_path / 'link.yml'
