@@ -5,9 +5,11 @@
 {% endblock extra_links%}
 
 {% block extra_footer %}
+{% if 'courses/meta' in g.model.courses %}
 <p>
     <a href="{{ g.model.courses['courses/meta'].get_url() }}">Jak přidat kurz</a>
 </p>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -28,6 +30,7 @@
 
   <div class="page">
     <div class="container calls-to-action">
+      {% if 'courses/pyladies' in g.model.courses %}
       <div class="row">
         <div class="mx-auto col-sm-6 call-to-action">
           <a class="btn btn-primary btn-lg" href="{{ g.model.courses['courses/pyladies'].get_url() }}" role="button">Chci začít!</a>
@@ -36,6 +39,7 @@
           </p>
         </div>
       </div>
+      {% endif %}
 
       <div class="row">
           <div class="col-sm-6 call-to-action">

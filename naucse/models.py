@@ -1002,6 +1002,8 @@ class Root(Model):
             for course_path in self_study_course_path.iterdir():
                 slug = 'courses/' + course_path.name
                 _load_local_course(course_path, slug, canonical_if_local=True)
+        else:
+            logger.warning(f'No courses at {self_study_course_path}')
 
         if run_path.exists():
             for year_path in sorted(run_path.iterdir()):
@@ -1011,13 +1013,16 @@ class Root(Model):
                         slug = f'{year_path.name}/{course_path.name}'
                         _load_local_course(course_path, slug)
 
-        self.add_course(Course.load_local(
-            'lessons',
-            repo_info=self.repo_info,
-            canonical=True,
-            parent=self,
-            path=path,
-        ))
+        if lesson_path.exists():
+            self.add_course(Course.load_local(
+                'lessons',
+                repo_info=self.repo_info,
+                canonical=True,
+                parent=self,
+                path=path,
+            ))
+        else:
+            logger.warning(f'No lessons at {lesson_path}')
 
         self_study_order_path = self_study_course_path / 'info.yml'
         if self_study_order_path.exists():
@@ -1026,6 +1031,9 @@ class Root(Model):
             self.featured_courses = [
                 self.courses[f'courses/{n}'] for n in course_info['order']
             ]
+        else:
+            logger.warning(f'No featured courses at {self_study_order_path}')
+            self.featured_courses = list(self.courses.values())
 
     def add_course(self, course):
         slug = course.slug
