@@ -1,86 +1,59 @@
-# Nauč se Python
+# naucse
 
-Otevřené materiály pro výuku Pythonu – jak na organizovaných kurzech,
-tak pro samouky.
+This is a server for open course material.
 
-Dostupné na [naucse.python.cz](https://naucse.python.cz).
+To use it, you will need some content.
+Usually, the repository with the content will require `naucse` module,
+and will run using `python -m naucse`.
+
+We use content at https://github.com/pyvec/naucse.python.cz to generate
+[naucse.python.cz](https://naucse.python.cz).
 
 
-## Instalace a spuštění
+## Installation
 
-Chceš-li server spustit na svém počítači, např. proto, že se chceš zapojit
-do vývoje, je potřeba ho nejdřív nainstalovat:
+Install from a virtual environment (or a tool like pipenv).
 
-* (nepovinné) Vytvoř a aktivuj si [virtuální prostředí](https://naucse.python.cz/lessons/beginners/install/) v Pythonu 3.6.
-* Přepni se do adresáře s kódem projektu.
-* Nainstaluj závislosti:
+To install the latest release:
 
-  * Linux/Mac:
+    (venv)$ python -m pip install naucse
 
-    ```console
-    $ python3 -m pip install pipenv
-    $ pipenv install
-    ```
+To install from a cloned repository:
 
-  * Windows:
+    (venv)$ python -m pip install -e.
 
-    ```doscon
-    > py -3 -m pip install pipenv
-    > pipenv install
-    ```
 
-Nainstalovanou aplikaci spustíš následovně:
+## Running
 
-* (nepovinné) Aktivuj si virtuální prostředí, máš-li ho vytvořené.
-* Spusť vývojový server:
-  ```console
-  $ pipenv run serve
-  ```
-* Program vypíše adresu (např. `http://0.0.0.0:8003/`); tu navštiv v prohlížeči.
+To run the serve, either change (`cd`) to the directory with content,
+or set `NAUCSE_ROOT_PATH` to that directory.
+Then run:
 
-Pokud chceš místo vývojového spuštění vygenerovat statické HTML soubory (např. pro nahrání na statický hosting):
+    (venv)$ python -m naucse serve
 
-* Spusť freeze. Parametr `--serve` provede spuštění webserveru, pomocí kterého si lze vygenerované soubory prohlédnout:
-  ```console
-  $ PYTHONPATH=. pipenv run freeze --serve
-  ```
-* HTML stránky jsou v adresáři `naucse/_build`.
-  Program vypíše adresu (např. `http://0.0.0.0:8000/`); tu navštiv v prohlížeči.
+Instead of `serve`, you can run `freeze` to generate a static website.
+See [Elsa](https://pypi.org/project/elsa/) for other usage, including
+deployment to GitHub Pages.
 
-## Externí kurzy
 
-Na naucse.python.cz jsou k dispozici i *externí* kurzy, které spravují více
-či méně důvěryhodní lidé.
-Proces vykreslování obsahu těchto kurzů jim dává velkou volnost: můžou převzít
-plnou kontrolu nad počítačem, na kterém `naucse` běží.
-Kvůli bezpečnosti je proto `naucse` ve výchozím nastavení neukazuje.
+## External courses
+
+Courses may be rendered from external repositories.
+This is a security risk, so such courses are disabled by default.
+Set `NAUCSE_TRUSTED_REPOS` to a space-separated globs of repository URLs
+to allow. The URLS have a `#branch` fragment.
+In an isolated environment, you can set `NAUCSE_TRUSTED_REPOS` to `*`
 
 
 
-## Testy
+## Tests
 
-Chceš-li pustit testy, nainstaluj si závislosti:
+Tests can be run using `tox`:
 
-```console
-$ pipenv install --dev
-```
-
-a testy pusť:
-
-```console
-$ pipenv run test
-```
+    $ tox
 
 
 ## Licence
-
-Kód je k dispozici pod licencí MIT, viz soubor [LICENSE.MIT].
-
-Obsah kurzů má vlastní licenci, která je uvedena v metadatech.
-Používáme pouze [licence pro otevřený obsah][free content licenses].
-Všechen obsah musí mít uvedenou licenci.
-
----
 
 The code is licensed under the terms of the MIT license, see [LICENSE.MIT] file
 for full text. By contributing code to this repository, you agree to have it
