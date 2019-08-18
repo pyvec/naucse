@@ -3,3 +3,5 @@
 _build
 .arca
 .pytest_cache
+/.tox
+/dist/

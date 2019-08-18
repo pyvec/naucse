@@ -1,16 +1,12 @@
 language: python
 python:
 - '3.6'
+- '3.7'
 cache:
   directories:
   - $HOME/.cache/pip
-  - .arca/cache
 install:
 - python -m pip install --upgrade pip pipenv
-- pipenv install --deploy --dev
+- python -m pip install --upgrade tox tox-travis
 script:
-- pipenv graph
-- pipenv run test
-after_script:
-- echo "Suplementary logs:"
-- cat .arca/naucse.log
+- tox
