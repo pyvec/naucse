@@ -62,7 +62,7 @@ def arca_model(tmp_path, content_repo):
     """Return a model that loads remote content using Arca"""
     model = make_model(
         arca=Arca(settings={
-            "ARCA_BACKEND": "arca.backend.VenvBackend",
+            "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
             "ARCA_BACKEND_VERBOSITY": 2,
             "ARCA_BASE_DIR": str(tmp_path / '.arca'),
         }),
