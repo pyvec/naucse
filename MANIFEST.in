@@ -1,3 +1,5 @@
 recursive-include naucse/static *
 recursive-include naucse/templates *
 recursive-include naucse/licenses *
+recursive-include test_naucse/ *.py
+recursive-include test_naucse/fixtures *
