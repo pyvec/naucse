@@ -43,10 +43,11 @@ def test_dump_empty_model(assert_model_dump):
 
 def test_load_empty_dir():
     model = models.Root()
-    with pytest.raises(FileNotFoundError):
-        model.load_local_courses(fixture_path / 'empty-directory')
 
+    # Collections are available but empty
     assert not model.courses
+    assert not model.run_years
+    assert not model.licenses
 
 
 def test_no_courses():
