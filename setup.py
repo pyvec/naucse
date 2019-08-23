@@ -11,7 +11,7 @@ setup(
     author_email='encukou@gmail.com',
     license='MIT',
     license_files=['LICENSE.MIT'],
-    url='https://github.com/encukou/naucse',
+    url='https://github.com/pyvec/naucse',
     packages=['naucse'],
     install_requires=[
         'elsa',
