@@ -22,6 +22,10 @@
 {% if page.lesson.material %}
 > <a href="{{ page.lesson.material.session.get_url() }}">{{ page.lesson.material.session.title }}</a>
 {% endif %}
+{% set parent=page.lesson.pages.index %}
+{% if parent and parent != page %}
+> <a href="{{ parent.get_url() }}">{{ parent.title }}</a>
+{% endif %}
 > {{ page.title }}
 {% endblock %}
 
