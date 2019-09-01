@@ -19,12 +19,11 @@ lessons:
                 title: A lesson
                 pages:
                     index:
-                        title: A lesson
                         content: <div>A page</div>
                         license: cc0
                         attribution: [me]
                     subtitled:
-                        title: "A lesson – Subtitled"
+                        subtitle: Subtitled
                         content: <div>A page</div>
                         license: cc0
                         attribution: [me]

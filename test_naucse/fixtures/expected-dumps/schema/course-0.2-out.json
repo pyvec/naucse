@@ -190,15 +190,23 @@ definitions:
                     to the repository root
                 pattern: ^[^./][^/]*(/[^./][^/]*)*$
                 type: string
+            subtitle:
+                description: "Human-readable subpage title.\n                Required\
+                    \ for index subpages other than \"index\" (unless \"title\"\n\
+                    \                is given).\n                \n\nAdded in API\
+                    \ version 0.2"
+                type: string
             title:
-                description: Human-readable title
+                description: "Human-readable page title.\n\n                Deprecated\
+                    \ since API version 0.2: use lesson.title\n                (and,\
+                    \ for subpages other than index, page.subtitle)\n            \
+                    \    \n\nModified in API version 0.2"
                 type: string
             url:
                 description: URL for a user-facing page on naucse
                 format: uri
                 type: string
         required:
-        - title
         - attribution
         - license
         title: Page

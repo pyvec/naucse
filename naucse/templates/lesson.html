@@ -24,7 +24,11 @@
 {% endif %}
 > <a href="{{ page.lesson.get_url() }}">{{ page.lesson.title }}</a>
 {% if page.slug != 'index' %}
-> {{ page.title }}
+    {% if page.subtitle %}
+        > {{ page.subtitle }}
+    {% else %}
+        > {{ page.title }}
+    {% endif %}
 {% endif %}
 {% endblock %}
 
