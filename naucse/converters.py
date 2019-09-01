@@ -476,6 +476,7 @@ class VersionField(AbstractField):
     def __init__(self, fields, name=None):
         self.fields = sorted((tuple(k), f) for k, f in fields.items())
         self.name = name
+        self._after_load_hooks = []
 
     def _field_for_context(self, context):
         for version, field in reversed(self.fields):
@@ -499,6 +500,8 @@ class VersionField(AbstractField):
             field.load_into(instance, data, context, **kwargs)
         else:
             setattr(instance, self.name, None)
+        for func in self._after_load_hooks:
+            func(instance, context)
 
     def dump_into(self, instance, data, context):
         version, field = self._field_for_context(context)
@@ -526,7 +529,11 @@ class VersionField(AbstractField):
         raise NotImplementedError('default_factory is not implemented yet')
 
     def after_load(self):
-        raise NotImplementedError('after_load is not implemented yet')
+        """See Field.after_load"""
+        def _decorator(func):
+            self._after_load_hooks.append(func)
+            return func
+        return _decorator
 
 
 class ModelConverter(BaseConverter):
