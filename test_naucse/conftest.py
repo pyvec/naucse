@@ -82,7 +82,7 @@ def assert_yaml_dump(data, filename):
             assert data == expected
 
 
-@pytest.fixture(params=((0, 0), (0, 1)))
+@pytest.fixture(params=((0, 0), (0, 1), (0, 2)))
 def assert_model_dump(request):
     version = request.param
     def _assert(model, filename):
