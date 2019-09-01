@@ -447,8 +447,9 @@ class Field(AbstractField):
     def after_load(self):
         """Decorate a function that will be called after an attribute is loaded
 
-        The decorated function will be called with one argument: the instance
-        being initialized. (The Field's attribute will already be set on it.)
+        The decorated function will be called with two arguments: the instance
+        being initialized (with the Field's attribute will already be set on
+        it) and the context.
         """
         def _decorator(func):
             self._after_load_hooks.append(func)

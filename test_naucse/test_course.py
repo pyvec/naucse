@@ -149,8 +149,8 @@ def test_complex_course(model, assert_model_dump):
     assert course.sessions['full'].description == 'A <em>full session!</em>'
 
 
-def test_api_1_0(model, assert_model_dump):
-    """Valid complex json that could come from a fork is loaded correctly"""
+def test_api_0_1(model, assert_model_dump):
+    """Valid complex json with API 0.1 is loaded correctly"""
     course = load_course_from_fixture(model, 'course-data/course-v0.1.yml')
 
     assert_model_dump(course, 'course-v0.1')
