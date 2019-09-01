@@ -16,6 +16,7 @@ lessons:
         api_version: [0, 2]
         data:
             test/lesson1:
+                title: A lesson
                 pages:
                     index:
                         title: A lesson

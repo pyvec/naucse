@@ -313,6 +313,10 @@ class Lesson(Model):
     pk_name = 'slug'
     parent_attrs = ('course', )
 
+    title = VersionField({
+        (0, 2): Field(str, doc='Human-readable lesson title')
+    })
+
     static_files = Field(
         DictConverter(StaticFile, key_arg='filename'),
         factory=dict,
@@ -322,6 +326,11 @@ class Lesson(Model):
         doc="Pages of content. Used for variants (e.g. a page for Linux and "
             + "another for Windows), or non-essential info (e.g. for "
             + "organizers)")
+
+    @pages.after_load()
+    def _set_title(self, context):
+        if self.title is None:
+            self.title = self.pages['index'].title
 
     @property
     def material(self):
