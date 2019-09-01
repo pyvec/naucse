@@ -512,18 +512,20 @@ class VersionField(AbstractField):
         version, field = self._field_for_context(context)
         if field:
             field.put_schema_into(object_schema, context)
-            try:
-                schema = object_schema['properties'][self.name]
-            except KeyError:
-                pass
-            if version == self.fields[0][0]:
-                note = 'Added in API version {}.{}'.format(*version)
-            else:
-                note = 'Modified in API version {}.{}'.format(*version)
-            if 'description' in schema:
-                schema['description'] += '\n\n' + note
-            else:
-                schema['description'] = note
+            if version != (0, 0):
+                try:
+                    schema = object_schema['properties'][self.name]
+                except KeyError:
+                    pass
+                    note = ''
+                if version == self.fields[0][0]:
+                    note = 'Added in API version {}.{}'.format(*version)
+                else:
+                    note = 'Modified in API version {}.{}'.format(*version)
+                if 'description' in schema:
+                    schema['description'] += '\n\n' + note
+                else:
+                    schema['description'] = note
 
     def default_factory(self):
         raise NotImplementedError('default_factory is not implemented yet')
