@@ -20,6 +20,7 @@ course:
                     title: A page
                     url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=index
             static_files: {}
+            title: A page
             url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson1
         test/lesson2:
             pages:
@@ -32,6 +33,7 @@ course:
                     title: Another page
                     url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson2&page_slug=index
             static_files: {}
+            title: Another page
             url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson2
     long_description: A <em>fun course!</em>
     place: Nivnice

@@ -110,11 +110,18 @@ definitions:
                     $ref: '#/definitions/static-file'
                 description: Static files the lesson's content may reference
                 type: object
+            title:
+                description: 'Human-readable lesson title
+
+
+                    Added in API version 0.2'
+                type: string
             url:
                 description: URL for a user-facing page on naucse
                 format: uri
                 type: string
         required:
+        - title
         - pages
         title: Lesson
         type: object

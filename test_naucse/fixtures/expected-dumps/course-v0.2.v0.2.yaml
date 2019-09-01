@@ -31,6 +31,7 @@ course:
                     title: A page with custom title
                     url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=subtitled-and-titled
             static_files: {}
+            title: A lesson
             url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson1
     long_description: ''
     sessions:
