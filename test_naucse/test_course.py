@@ -149,11 +149,13 @@ def test_complex_course(model, assert_model_dump):
     assert course.sessions['full'].description == 'A <em>full session!</em>'
 
 
-def test_api_0_1(model, assert_model_dump):
-    """Valid complex json with API 0.1 is loaded correctly"""
-    course = load_course_from_fixture(model, 'course-data/course-v0.1.yml')
+@pytest.mark.parametrize('version', ('0.1', '0.2'))
+def test_api_version(model, assert_model_dump, version):
+    """Valid json with API changes from the given version is loaded correctly"""
+    name = f'course-v{version}'
+    course = load_course_from_fixture(model, f'course-data/{name}.yml')
 
-    assert_model_dump(course, 'course-v0.1')
+    assert_model_dump(course, name)
 
 
 def test_derives(model):
