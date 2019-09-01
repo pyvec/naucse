@@ -273,7 +273,36 @@ class Page(Model):
     pk_name = 'slug'
     parent_attrs = 'lesson', 'course'
 
-    title = Field(str, doc='Human-readable title')
+    subtitle = VersionField({
+        (0, 2): Field(
+            str, optional=True,
+            doc="""Human-readable subpage title.
+                Required for index subpages other than "index" (unless "title"
+                is given).
+                """
+        ),
+    })
+    title = VersionField({
+        (0, 2): Field(
+            str, optional=True,
+            doc="""Human-readable page title.
+
+                Deprecated since API version 0.2: use lesson.title
+                (and, for subpages other than index, page.subtitle)
+                """
+        ),
+        (0, 0): Field(str, doc='Human-readable title'),
+    })
+
+    @title.after_load()
+    def _generate_title(self, context):
+        if self.title is None:
+            if self.slug == 'index':
+                self.title = self.lesson.title
+            else:
+                if self.subtitle is None:
+                    raise ValueError('Either title or subtitle is required')
+                self.title = f'{self.lesson.title} – {self.subtitle}'
 
     attribution = Field(ListConverter(HTMLFragmentConverter()),
                         doc='Lines of attribution, as HTML fragments')
