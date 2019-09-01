@@ -48,6 +48,10 @@ import inspect
 import jsonschema
 
 
+class DuplicateKeyError(ValueError):
+    """A mapping with duplicate keys was specified"""
+
+
 class BaseConverter:
     """Converts to/from JSON-compatible values and provides JSON schema
 
@@ -258,7 +262,10 @@ class KeyAttrDictConverter(BaseConverter):
             if self.index_arg:
                 kwargs[self.index_arg] = index
             item = self.item_converter.load(value, context, **kwargs)
-            result[getattr(item, self.key_attr)] = item
+            key = getattr(item, self.key_attr)
+            if key in result:
+                raise DuplicateKeyError(f'Duplicate key: {key}')
+            result[key] = item
         return result
 
     def dump(self, value, context):

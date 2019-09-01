@@ -1,0 +1,9 @@
+course:
+    api_version: [0, 0]
+    course:
+        title: An invalid course
+        sessions:
+          - slug: duplicate
+            title: "A session"
+          - slug: duplicate
+            title: "A session"
