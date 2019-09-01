@@ -8,6 +8,9 @@ from naucse import models
 from naucse.edit_info import get_local_repo_info
 
 
+API_VERSIONS = ((0, 0), (0, 1), (0, 2))
+
+
 fixture_path = Path(__file__).parent / 'fixtures'
 
 
@@ -82,7 +85,7 @@ def assert_yaml_dump(data, filename):
             assert data == expected
 
 
-@pytest.fixture(params=((0, 0), (0, 1), (0, 2)))
+@pytest.fixture(params=API_VERSIONS)
 def assert_model_dump(request):
     version = request.param
     def _assert(model, filename):
