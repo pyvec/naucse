@@ -94,14 +94,14 @@ def assert_model_dump(request):
     return _assert
 
 
-def add_test_course(model, slug, data):
+def add_test_course(model, slug, data, version=(0, 0)):
     model.add_course(models.load(
         models.Course,
         slug=slug,
         repo_info=get_local_repo_info(fixture_path),
         parent=model,
         data={
-            'api_version': [0, 0],
+            'api_version': list(version),
             'course': data,
         },
     ))

@@ -156,3 +156,78 @@ def test_invalid_session_time(model, key):
                 },
             ],
         })
+
+
+def test_course_api02_fails_without_timezone(model):
+    """Time without a timezone is not allowed in API 0.3+"""
+    with pytest.raises(ValueError):
+        add_test_course(
+            model,
+            'courses/test',
+            {
+                'title': 'Test course',
+                'default_time': {'start': '18:00', 'end': '20:00'},
+                'sessions': [
+                    {
+                        'title': 'A session with a date',
+                        'slug': 'dated-session',
+                        'date': '2019-01-01',
+                    },
+                ],
+            },
+            version=(0, 3),
+        )
+
+
+def test_course_api02_ok_without_timezone(model):
+    """No timezone is OK in API 0.3+ if there's not time info"""
+    add_test_course(
+        model,
+        'courses/test',
+        {
+            'title': 'Test course',
+            'default_time': {'start': '18:00:00', 'end': '20:00'},
+            'sessions': [
+                {
+                    'title': 'A self-study session',
+                    'slug': 'undated-session',
+                },
+            ],
+        },
+        version=(0, 3),
+    )
+    course = model.courses['courses/test']
+    assert course.timezone is None
+    assert course.sessions['undated-session'].date is None
+    assert course.sessions['undated-session'].time is None
+
+
+def test_course_api02_ok_without_timezone(model):
+    """No timezone is OK in API 0.3+ if explicit TZ offset is always given"""
+    add_test_course(
+        model,
+        'courses/test',
+        {
+            'title': 'Test course',
+            'default_time': {'start': '18:00', 'end': '20:00'},
+            'sessions': [
+                {
+                    'title': 'A precisely specified session',
+                    'slug': 'specified-session',
+                    'time': {
+                        'start': '2019-01-01 18:00:00+0100',
+                        'end': '2019-01-01 20:00+0100',
+                    }
+                },
+            ],
+        },
+        version=(0, 3),
+    )
+    course = model.courses['courses/test']
+    assert course.timezone is None
+    assert course.sessions['specified-session'].date is None
+    tzinfo = dateutil.tz.tzoffset('+0100', 3600)
+    assert course.sessions['specified-session'].time == {
+        'start': datetime.datetime(2019, 1, 1, 18, 0, tzinfo=tzinfo),
+        'end': datetime.datetime(2019, 1, 1, 20, 0, tzinfo=tzinfo),
+    }
