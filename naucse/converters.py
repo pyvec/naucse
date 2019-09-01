@@ -514,10 +514,9 @@ class VersionField(AbstractField):
             field.put_schema_into(object_schema, context)
             if version != (0, 0):
                 try:
-                    schema = object_schema['properties'][self.name]
+                    schema = object_schema['properties'][field.data_key]
                 except KeyError:
-                    pass
-                    note = ''
+                    return
                 if version == self.fields[0][0]:
                     note = 'Added in API version {}.{}'.format(*version)
                 else:
