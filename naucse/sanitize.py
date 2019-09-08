@@ -158,12 +158,6 @@ def sanitize_element(element, *, naucse_urls=None):
             # del element.attrib[attr_name]
             continue
 
-        if (
-            attr_name not in ALLOWED_ATTRIBUTES
-            and attr_name not in PER_TAG_ATTRIBUTES.get(element.tag, ())
-        ):
-            raise DisallowedAttribute(f'{attr_name} on {element.tag}')
-
         if attr_name in {'href', 'src'}:
             element.attrib[attr_name] = convert_link(
                 attr_name, value, naucse_urls=naucse_urls)
@@ -173,6 +167,13 @@ def sanitize_element(element, *, naucse_urls=None):
             # We scope CSS in <style> tags in the validator, so the "scoped"
             # attribute would break browsers that still honor it.
             del element.attrib[attr_name]
+            continue
+
+        if (
+            attr_name not in ALLOWED_ATTRIBUTES
+            and attr_name not in PER_TAG_ATTRIBUTES.get(element.tag, ())
+        ):
+            raise DisallowedAttribute(f'{attr_name} on {element.tag}')
 
     # Recurse
     for child in element:
