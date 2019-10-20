@@ -197,7 +197,7 @@ class RelativePathConverter(BaseConverter):
     def get_schema(self, context):
         return {
             'type': 'string',
-            'pattern': '^[^./][^/]+(/[^./][^/]+)*$'
+            'pattern': '^[^./][^/]*(/[^./][^/]*)*$'
         }
 
 
