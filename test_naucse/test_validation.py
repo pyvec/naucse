@@ -126,6 +126,32 @@ def test_scope_multiple_css_selectors():
             }</style>
     """)
 
+def test_style_scoped():
+    assert_changed("""
+        <style scoped id="my-style">
+        .dataframe {
+            color: red;
+        }
+        </style>
+    """, """
+        <style id="my-style">.lesson-content .dataframe {
+            color: red
+            }</style>
+    """)
+
+def test_style_scoped_value():
+    assert_changed("""
+        <style id="my-style" scoped="scoped">
+        .dataframe {
+            color: red;
+        }
+        </style>
+    """, """
+        <style id="my-style">.lesson-content .dataframe {
+            color: red
+            }</style>
+    """)
+
 def test_fix_bad_html():
     # We let lxml do its best to produce valid HTML
     assert_changed(
