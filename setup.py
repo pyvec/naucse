@@ -27,6 +27,9 @@ setup(
         'lxml',
         'naucse-render',
     ],
+    extras_require={
+        'dev': ['tox', 'pytest'],
+    },
     include_package_data=True,
     zip_safe=False,
 )

@@ -3,7 +3,7 @@
 This is a server for open course material.
 
 To use it, you will need some content.
-Usually, the repository with the content will require `naucse` module,
+Usually, the repository with the content will require the `naucse` module,
 and will run using `python -m naucse`.
 
 We use content at https://github.com/pyvec/naucse.python.cz to generate
@@ -12,15 +12,15 @@ We use content at https://github.com/pyvec/naucse.python.cz to generate
 
 ## Installation
 
-Install from a virtual environment (or a tool like pipenv).
+Install from a virtual environment.
 
 To install the latest release:
 
     (venv)$ python -m pip install naucse
 
-To install from a cloned repository:
+To install from a cloned repository, for development:
 
-    (venv)$ python -m pip install -e.
+    (venv)$ python -m pip install -e.[dev]
 
 
 ## Running
@@ -50,7 +50,11 @@ In an isolated environment, you can set `NAUCSE_TRUSTED_REPOS` to `*`
 
 Tests can be run using `tox`:
 
-    $ tox
+    (venv)$ tox
+
+or `pytest` directly:
+
+    (venv)$ python -m pytest
 
 
 ## Licence
