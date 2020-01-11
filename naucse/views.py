@@ -1,4 +1,5 @@
 import datetime
+import time
 from pathlib import Path
 import functools
 import calendar
@@ -427,3 +428,12 @@ def course_api(course_slug):
     except KeyError:
         abort(404)
     return jsonify(models.dump(course, version=models.API_VERSION))
+
+
+@app.route('/v0/timestamp.json')
+def timestamp():
+    """
+    UNIX timestamp which will be fixed during freeze.
+    It is used for invalidating remote caches of the generated JSON API.
+    """
+    return jsonify(int(time.time()))
