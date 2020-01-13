@@ -51,6 +51,11 @@ class Renderer:
         with self.wrap_errors('get_course', slug):
             info = self.arca.run(self.url, self.branch, task).output
 
+        # If an ETag is not generated (which is the common case),
+        # use Arca's task hash.
+        if 'course' in info:
+            info['course'].setdefault('etag', task.hash)
+
         return info
 
     def get_lessons(self, lesson_slugs, *, vars, path):

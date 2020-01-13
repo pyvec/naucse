@@ -7,6 +7,7 @@ course:
         end: '21:00'
         start: '19:00'
     end_date: '2000-01-01'
+    etag: e441a645f693a87c7568cf1e69c9eafadb1e081a0bd8ddc06896f675f327db05
     lessons: {}
     long_description: ''
     sessions:
