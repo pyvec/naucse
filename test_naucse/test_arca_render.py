@@ -21,6 +21,7 @@ def run(args, *, cwd, check=True, env=None, **kwargs):
     - `cwd` (current directory) must be given explicitly
     - `check` (raise error on non-zero exit code) is True by default
     - The environment is set up to (attempt to) isolate Git configuration
+      and produce consistent commit hashes
     """
     if env is None:
         env = os.environ
@@ -28,8 +29,10 @@ def run(args, *, cwd, check=True, env=None, **kwargs):
     env.setdefault('HOME', str(cwd))
     env.setdefault('XDG_CONFIG_HOME', str(cwd))
     env.setdefault('GIT_CONFIG_NOSYSTEM', '1')
+    env.setdefault('GIT_AUTHOR_DATE', 'Mon, 20 Jan 2020 00:00:00 +0000')
+    env.setdefault('GIT_COMMITTER_DATE', 'Mon, 20 Jan 2020 00:00:00 +0000')
     print('Run:', args)
-    return subprocess.run(args, check=check, cwd=cwd, **kwargs)
+    return subprocess.run(args, check=check, cwd=cwd, env=env, **kwargs)
 
 
 @pytest.fixture(scope='session')
