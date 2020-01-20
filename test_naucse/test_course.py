@@ -6,6 +6,7 @@ from jsonschema.exceptions import ValidationError
 
 from naucse import models
 from naucse.edit_info import get_local_repo_info
+from naucse.converters import DuplicateKeyError
 
 from test_naucse.conftest import add_test_course, fixture_path
 
@@ -195,3 +196,9 @@ def test_invalid_course(model):
     """Invalid complex json that could come from a fork is not loaded"""
     with pytest.raises(ValidationError):
         load_course_from_fixture(model, 'course-data/invalid-course.yml')
+
+
+def test_invalid_duplicate_session(model):
+    """Json with duplicate sessions that could come from a fork is not loaded"""
+    with pytest.raises(DuplicateKeyError):
+        load_course_from_fixture(model, 'course-data/invalid-duplicate-session.yml')
