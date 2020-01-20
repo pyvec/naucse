@@ -10,6 +10,7 @@ course:
             materials:
               - type: lesson
                 lesson_slug: test/lesson1
+        etag: testing-etag
 
 lessons:
     test/lesson1:

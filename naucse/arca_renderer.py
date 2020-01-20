@@ -21,6 +21,9 @@ class Renderer:
     """Render courses from a remote repository using Arca
 
     Renderer objects have the same API as the `naucse_render` module.
+
+    This renderer additionally populates the course 'etag', if the
+    remote task doesn't return it.
     """
     def __init__(self, arca, url, branch):
         self.arca = arca
@@ -50,6 +53,11 @@ class Renderer:
         )
         with self.wrap_errors('get_course', slug):
             info = self.arca.run(self.url, self.branch, task).output
+            repo = self.arca.get_repo(self.url, self.branch)
+            etag = self.arca.current_git_hash(self.url, self.branch, repo)
+
+        if 'course' in info:
+            info['course'].setdefault('etag', etag)
 
         return info
 

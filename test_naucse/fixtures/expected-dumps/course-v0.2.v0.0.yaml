@@ -3,6 +3,7 @@ api_version:
 - 0
 - 0
 course:
+    etag: testing-etag
     lessons:
         test/lesson1:
             pages:
