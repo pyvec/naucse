@@ -56,6 +56,7 @@ ALLOWED_ATTRIBUTES = {
     'class',
     'id',   # XXX: validate id's
     'aria-hidden',
+    'title',
 }
 PER_TAG_ATTRIBUTES = {
     'a': {'href'},
