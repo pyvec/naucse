@@ -260,6 +260,10 @@ def course_as_epub(course_slug, year=None):
             # je nutné upravit adresy img
             chap_tree = BeautifulSoup(lesson_chapter_html_raw, 'html.parser')
 
+            sols = chap_tree.find_all('div', class_='solution')
+            for sol in sols:
+                sol.decompose()
+
             images = chap_tree.find_all('img')
             for image in images:
                 img_base_name = os.path.basename(image['src'])
