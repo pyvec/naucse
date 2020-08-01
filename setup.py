@@ -27,6 +27,7 @@ setup(
         'lxml',
         'naucse-render',
         'mkepub',
+        'beautifulsoup4',
     ],
     extras_require={
         'dev': ['tox', 'pytest'],

@@ -14,7 +14,8 @@ from naucse.urlconverters import register_url_converters
 from naucse.templates import setup_jinja_env
 
 import mkepub
-import bs4
+from bs4 import BeautifulSoup
+
 
 app = Flask('naucse')
 app.config['JSON_AS_ASCII'] = False
@@ -223,6 +224,8 @@ def course_as_epub(course_slug, year=None):
 
     # logger.debug(course.base_path)
 
+    img_counter = 1
+
     epub_path = str(course.base_path) + '/' + course.slug + '.epub'
 
     if (os.path.exists(epub_path)):
@@ -255,22 +258,29 @@ def course_as_epub(course_slug, year=None):
 
 
             # je nutné upravit adresy img
-            # chap_tree = BeautifulSoup(lesson_chapter_html_raw, 'html.parser')
+            chap_tree = BeautifulSoup(lesson_chapter_html_raw, 'html.parser')
 
-            #images = chap_tree.find_all('img')
-            #for image in images:
-            #    img_base_name = os.path.basename(image['src'])
-            #    static = lesson.static_files[img_base_name]
-            #    image_path = static.path
+            images = chap_tree.find_all('img')
+            for image in images:
+                img_base_name = os.path.basename(image['src'])
+                static = lesson.static_files[img_base_name]
+                image_path = static.path
+
+                image_ext = os.path.splitext(image_path)[1]
+                image_in_epub = '%05d.%s' % (img_counter, image_ext)
+                img_counter = img_counter + 1
 
                 # logger.debug(image_path)
 
-            #    image['src'] = image_path
+                image['src'] = 'images/%s' % image_in_epub
 
-            #lesson_chapter_html = str(chap_tree)
+                with open(image_path, 'rb') as img:
+                    epub_course.add_image(image_in_epub, img.read())
+
+            lesson_chapter_html = str(chap_tree)
 
             epub_course.add_page(material.title or 'bez titulu',
-                    lesson_chapter_html_raw,
+                    lesson_chapter_html,
                     parent = head_chapter)
 
     epub_course.save(str(course.base_path) +  '/' + course.slug + '.epub')
