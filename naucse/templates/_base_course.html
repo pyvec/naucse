@@ -30,8 +30,10 @@
           {% endblock %}
         </div>
 
+        {% if not is_epub|default(False) %}
         {% block lesson_end %}{% endblock %}
         {%- block prev_next %}{{'\n'}}{% endblock %}
+        {% endif %}
     </div>
 </div>
 
