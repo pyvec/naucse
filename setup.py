@@ -26,6 +26,7 @@ setup(
         'jsonschema',
         'lxml',
         'naucse-render',
+        'mkepub',
     ],
     extras_require={
         'dev': ['tox', 'pytest'],
