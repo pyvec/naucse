@@ -254,6 +254,7 @@ def course_as_epub(course_slug, year=None):
                                 is_canonical_lesson=is_canonical_lesson,
                                 page_attribution=page.attribution,
                                 edit_info=page.edit_info,
+                                is_epub=True,
                             )
 
 
