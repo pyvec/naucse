@@ -5,9 +5,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <title>
-            
+
                 {% block title %}Nauč se Python{% endblock title %}
-            
+
         </title>
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
@@ -30,6 +30,7 @@
     </head>
 
     <body>
+        {% if not is_epub|default(False) %}
         <nav class="header">
             <ul class="container menu">
                 <li><a href="{{ url_for('index') }}" class="logo"><h1>Nauč se Python!</h1></a></li>
@@ -37,6 +38,7 @@
                 <li><a href="{{ url_for('runs') }}" class="menu-link"><h2>Kurzy</h2></a></li>
             </ul>
         </nav>
+        {% endif %}
 
         {% block content %}
         {% endblock %}

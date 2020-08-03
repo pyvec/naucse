@@ -13,6 +13,10 @@ from naucse import models
 from naucse.urlconverters import register_url_converters
 from naucse.templates import setup_jinja_env
 
+import mkepub
+from bs4 import BeautifulSoup
+
+
 app = Flask('naucse')
 app.config['JSON_AS_ASCII'] = False
 
@@ -209,6 +213,84 @@ def course(course_slug, year=None):
         recent_runs=recent_runs,
         edit_info=course.edit_info,
     )
+
+@app.route('/<course:course_slug>.epub')
+def course_as_epub(course_slug, year=None):
+    try:
+        course = g.model.courses[course_slug]
+    except KeyError:
+        print(g.model.courses)
+        abort(404)
+
+    # logger.debug(course.base_path)
+
+    img_counter = 1
+
+    epub_path = str(course.base_path) + '/' + course.slug + '.epub'
+
+    if (os.path.exists(epub_path)):
+        os.remove(epub_path)
+
+    epub_course = mkepub.Book(course.title, language='cs')
+
+    course_url =  'file://' + str(course.base_path)
+
+    for session_slug in course.sessions:
+        session = course.sessions[session_slug]
+        head_chapter = epub_course.add_page(session.title or 'title', '<head/>')
+
+        for material in [material for material in session.materials if material.type == 'lesson']:
+            lesson = material.lesson
+            is_canonical_lesson, canonical_url = _get_canonicality_info(lesson)
+
+            page = lesson.pages['index']
+
+            lesson_chapter_html_raw = render_template(
+                                "lesson.html",
+                                page=page,
+                                content=page.content,
+                                course=course,
+                                canonical_url=canonical_url,
+                                is_canonical_lesson=is_canonical_lesson,
+                                page_attribution=page.attribution,
+                                edit_info=page.edit_info,
+                                is_epub=True,
+                            )
+
+
+            # je nutné upravit adresy img
+            chap_tree = BeautifulSoup(lesson_chapter_html_raw, 'html.parser')
+
+            sols = chap_tree.find_all('div', class_='solution')
+            for sol in sols:
+                sol.decompose()
+
+            images = chap_tree.find_all('img')
+            for image in images:
+                img_base_name = os.path.basename(image['src'])
+                static = lesson.static_files[img_base_name]
+                image_path = static.path
+
+                image_ext = os.path.splitext(image_path)[1]
+                image_in_epub = '%05d.%s' % (img_counter, image_ext)
+                img_counter = img_counter + 1
+
+                # logger.debug(image_path)
+
+                image['src'] = 'images/%s' % image_in_epub
+
+                with open(image_path, 'rb') as img:
+                    epub_course.add_image(image_in_epub, img.read())
+
+            lesson_chapter_html = str(chap_tree)
+
+            epub_course.add_page(material.title or 'bez titulu',
+                    lesson_chapter_html,
+                    parent = head_chapter)
+
+    epub_course.save(str(course.base_path) +  '/' + course.slug + '.epub')
+
+    return send_from_directory(course.base_path, course.slug + '.epub', cache_timeout = 0)
 
 
 @app.route('/<course:course_slug>/sessions/<session_slug>/',
