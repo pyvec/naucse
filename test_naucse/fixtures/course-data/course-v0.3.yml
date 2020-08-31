@@ -4,12 +4,20 @@ course:
         title: A course loaded from API version 0.3
         subtitle: Suitable for testing only.
         source_file: courses/complex/info.yml
+        default_time:
+            start: "18:00"
+            end: "20:00"
         sessions:
           - slug: first
             title: First lesson
+            date: "2019-01-01"
             materials:
               - type: lesson
                 lesson_slug: test/lesson1
+          - slug: second
+            title: Second lesson
+            date: "2019-04-01"
+            materials: []
         etag: testing-etag
 
 lessons:
