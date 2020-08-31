@@ -1,0 +1,35 @@
+course:
+    api_version: [0, 3]
+    course:
+        title: A course loaded from API version 0.3
+        subtitle: Suitable for testing only.
+        source_file: courses/complex/info.yml
+        sessions:
+          - slug: first
+            title: First lesson
+            materials:
+              - type: lesson
+                lesson_slug: test/lesson1
+        etag: testing-etag
+
+lessons:
+    test/lesson1:
+        api_version: [0, 3]
+        data:
+            test/lesson1:
+                title: A lesson
+                pages:
+                    index:
+                        content: <div>A page</div>
+                        license: cc0
+                        attribution: [me]
+                    subtitled:
+                        subtitle: Subtitled
+                        content: <div>A page</div>
+                        license: cc0
+                        attribution: [me]
+                    subtitled-and-titled:
+                        title: "A page with custom title"
+                        content: <div>A page</div>
+                        license: cc0
+                        attribution: [me]

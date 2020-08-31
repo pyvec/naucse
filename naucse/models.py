@@ -20,7 +20,7 @@ from naucse.logger import logger
 
 import naucse_render
 
-API_VERSION = 0, 2
+API_VERSION = 0, 3
 
 # XXX: Different timezones?
 _TIMEZONE = 'Europe/Prague'

@@ -150,7 +150,7 @@ def test_complex_course(model, assert_model_dump):
     assert course.sessions['full'].description == 'A <em>full session!</em>'
 
 
-@pytest.mark.parametrize('version', ('0.1', '0.2'))
+@pytest.mark.parametrize('version', ('0.1', '0.2', '0.3'))
 def test_api_version(model, assert_model_dump, version):
     """Valid json with API changes from the given version is loaded correctly"""
     name = f'course-v{version}'

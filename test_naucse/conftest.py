@@ -8,7 +8,7 @@ from naucse import models
 from naucse.edit_info import get_local_repo_info
 
 
-API_VERSIONS = ((0, 0), (0, 1), (0, 2))
+API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3))
 
 
 fixture_path = Path(__file__).parent / 'fixtures'
