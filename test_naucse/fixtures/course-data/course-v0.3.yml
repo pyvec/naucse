@@ -4,6 +4,7 @@ course:
         title: A course loaded from API version 0.3
         subtitle: Suitable for testing only.
         source_file: courses/complex/info.yml
+        timezone: Antarctica/Troll  # GMT in January; +2h in April
         default_time:
             start: "18:00"
             end: "20:00"

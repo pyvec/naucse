@@ -6,6 +6,7 @@ from fnmatch import fnmatch
 import shutil
 
 import dateutil
+import dateutil.tz
 import yaml
 from arca import Task
 
@@ -22,8 +23,9 @@ import naucse_render
 
 API_VERSION = 0, 3
 
-# XXX: Different timezones?
-_TIMEZONE = 'Europe/Prague'
+# Before API 0.3, a fixed timezone was assumed
+_OLD_DEFAULT_TIMEZONE_NAME = 'Europe/Prague'
+_OLD_DEFAULT_TIMEZONE = dateutil.tz.gettz(_OLD_DEFAULT_TIMEZONE_NAME)
 
 
 class NoURL(LookupError):
@@ -448,35 +450,60 @@ def set_prev_next(sequence):
         now.next = next
 
 
+def _strptime_with_optional_z(data, dateformat):
+    """Like datetime.strptime, but with possibly empty timezone for %z
+
+    If there is no timezone offset, the "%z" is ignored and a naive datetime
+    object is returned.
+    """
+    if not ('+' in data or '-' in data):
+        dateformat = dateformat.replace('%z', '')
+    return datetime.datetime.strptime(data, dateformat)
+
+
 class SessionTimeConverter(BaseConverter):
     """Convert a session time, represented in JSON as string
 
     May be loaded as a complete datetime, or as just date or None, which need
-    to be fixed up using `_combine_session_time`.
+    to be fixed up using `Session._fix_time`.
+
+    May contain a timezone offset on input. If not, needs to be fixed up using
+    `Session._fix_time`.
+
     Converted to the full datetime on output.
     """
     def load(self, data, context):
+        if data.count(':') == 2:
+            time_format = '%H:%M:%S'
+        else:
+            time_format = '%H:%M'
         try:
-            return datetime.datetime.strptime('%Y-%m-%d %H:%M:%S', data)
+            return _strptime_with_optional_z(data, f'%Y-%m-%d {time_format}%z')
         except ValueError:
-            if data.count(':') == 2:
-                time = datetime.datetime.strptime(data, '%H:%M:%s').time()
-            else:
-                time = datetime.datetime.strptime(data, '%H:%M').time()
-            return time.replace(tzinfo=dateutil.tz.gettz(_TIMEZONE))
+            return _strptime_with_optional_z(data, f'{time_format}%z').timetz()
 
     def dump(self, value, context):
-        return value.strftime('%Y-%m-%d %H:%M:%S')
+        if context.version < (0, 3):
+            value = value.astimezone(_OLD_DEFAULT_TIMEZONE)
+            return value.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            return value.strftime('%Y-%m-%d %H:%M:%S%z')
 
     @classmethod
     def get_schema(cls, context):
         _date_re = '[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        if context.version < (0, 3):
+            _tz_re = ''
+            _optional_tz_re = ''
+        else:
+            _tz_re = '[+-][0-9]{4}'
+            _optional_tz_re = f'({_tz_re})?'
         if context.is_input:
             _time_re = '[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?'
-            pattern = f'^({_date_re} )?{_time_re}$'
+            pattern = f'^({_date_re} )?{_time_re}{_optional_tz_re}$'
         else:
             _time_re = '[0-9]{2}:[0-9]{2}:[0-9]{2}'
-            pattern = f'^{_date_re} {_time_re}$'
+            pattern = f'^{_date_re} {_time_re}{_tz_re}$'
         return {
             'type': 'string',
             'pattern': pattern,
@@ -580,16 +607,16 @@ class Session(Model):
         for kind in 'start', 'end':
             time = self.time.get(kind, None)
             if isinstance(time, datetime.datetime):
-                result[kind] = time
+                pass
             elif isinstance(time, datetime.time):
                 if self.date:
-                    result[kind] = datetime.datetime.combine(self.date, time)
+                    time = datetime.datetime.combine(self.date, time)
                 else:
                     self.time = None
                     return
             elif time is None:
                 if self.date and self.course.default_time:
-                    result[kind] = datetime.datetime.combine(
+                    time = datetime.datetime.combine(
                         self.date, self.course.default_time[kind],
                     )
                 else:
@@ -597,6 +624,14 @@ class Session(Model):
                     return
             else:
                 raise TypeError(time)
+            if time.tzinfo is None:
+                if self.course.timezone is None:
+                    raise ValueError(
+                        f'{kind} time of session {self.slug} is missing '
+                        + 'timezone information. Provide an offset or set '
+                        + 'a timezone for the whole course.')
+                time = time.replace(tzinfo=self.course.timezone)
+            result[kind] = time
         self.time = result
 
 
@@ -614,12 +649,8 @@ class AnyDictConverter(BaseConverter):
 
 
 def time_from_string(time_string):
-    """Get datetime.time object from a 'HH:MM' string"""
-    hour, minute = time_string.split(':')
-    hour = int(hour)
-    minute = int(minute)
-    tzinfo = dateutil.tz.gettz(_TIMEZONE)
-    return datetime.time(hour, minute, tzinfo=tzinfo)
+    """Get datetime.time object from a 'HH:MM' or 'HH:MM+ZZZZ' string"""
+    return _strptime_with_optional_z(time_string, '%H:%M').timetz()
 
 
 class TimeIntervalConverter(BaseConverter):
@@ -631,9 +662,10 @@ class TimeIntervalConverter(BaseConverter):
         }
 
     def dump(self, value, context):
+        time_format = '%H:%M'
         return {
-            'start': value['start'].strftime('%H:%M'),
-            'end': value['end'].strftime('%H:%M'),
+            'start': value['start'].strftime(time_format),
+            'end': value['end'].strftime(time_format),
         }
 
     @classmethod
@@ -723,6 +755,27 @@ class Course(Model):
     default_time = Field(
         TimeIntervalConverter(), optional=True,
         doc="Default start and end time for sessions")
+
+    # There's no good way to get the name from a timezone object,
+    # so keep a `_timezone_name` string, and set `timezone` from it.
+    _timezone_name = VersionField({
+        (0, 3): Field(
+            str, data_key='timezone', optional=True,
+            doc="Timezone for times specified without a timezone (i.e. as "
+                + "HH:MM (rather than HH:MM+ZZZZ). "
+                + "Mandatory if such times appear in the course."
+        )
+    })
+
+    @_timezone_name.after_load()
+    def set_timezone(self, context):
+        if context.version < (0, 3):
+            self._timezone_name = _OLD_DEFAULT_TIMEZONE_NAME
+            self.timezone = _OLD_DEFAULT_TIMEZONE
+        elif self._timezone_name:
+            self.timezone = dateutil.tz.gettz(self._timezone_name)
+        else:
+            self.timezone = None
 
     sessions = Field(
         KeyAttrDictConverter(Session, key_attr='slug', index_arg='index'),

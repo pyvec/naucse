@@ -55,8 +55,8 @@ course:
                 url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=front&session_slug=first
         slug: first
         time:
-            end: '2019-01-01 20:00:00'
-            start: '2019-01-01 18:00:00'
+            end: 2019-01-01 20:00:00+0000
+            start: 2019-01-01 18:00:00+0000
         title: First lesson
         url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=first
     -   date: '2019-04-01'
@@ -70,13 +70,14 @@ course:
                 url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=front&session_slug=second
         slug: second
         time:
-            end: '2019-04-01 20:00:00'
-            start: '2019-04-01 18:00:00'
+            end: 2019-04-01 20:00:00+0200
+            start: 2019-04-01 18:00:00+0200
         title: Second lesson
         url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=second
     source_file: courses/complex/info.yml
     start_date: '2019-01-01'
     subtitle: Suitable for testing only.
+    timezone: Antarctica/Troll
     title: A course loaded from API version 0.3
     url: http://dummy.test/model/web/Course/?course_slug=courses/complex
     vars: {}

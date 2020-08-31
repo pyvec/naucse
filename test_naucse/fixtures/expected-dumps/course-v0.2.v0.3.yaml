@@ -53,6 +53,7 @@ course:
         url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=first
     source_file: courses/complex/info.yml
     subtitle: Suitable for testing only.
+    timezone: Europe/Prague
     title: A course loaded from API version 0.2
     url: http://dummy.test/model/web/Course/?course_slug=courses/complex
     vars: {}

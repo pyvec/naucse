@@ -78,6 +78,14 @@ definitions:
                 description: Human-readable description of the time the course takes
                     place (e.g. 'Wednesdays')
                 type: string
+            timezone:
+                description: 'Timezone for times specified without a timezone (i.e.
+                    as HH:MM (rather than HH:MM+ZZZZ). Mandatory if such times appear
+                    in the course.
+
+
+                    Added in API version 0.3'
+                type: string
             title:
                 description: Human-readable title
                 type: string
@@ -164,7 +172,7 @@ definitions:
                 type: string
             time:
                 additionalProperties:
-                    pattern: ^([0-9]{4}-[0-9]{2}-[0-9]{2} )?[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?$
+                    pattern: ^([0-9]{4}-[0-9]{2}-[0-9]{2} )?[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?([+-][0-9]{4})?$
                     type: string
                 description: Time when this session takes place.
                 required:

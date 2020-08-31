@@ -70,14 +70,15 @@ course:
         serial: '2'
         slug: full
         time:
-            end: '2010-10-20 10:00:00'
-            start: '2010-10-20 09:00:00'
+            end: 2010-10-20 10:00:00+0200
+            start: 2010-10-20 09:00:00+0200
         title: Full session
         url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=full
     source_file: courses/complex/info.yml
     start_date: '2010-10-20'
     subtitle: Suitable for testing only.
     time_description: fortnightly yesteryear
+    timezone: Europe/Prague
     title: A complex course
     url: http://dummy.test/model/web/Course/?course_slug=courses/complex
     vars:

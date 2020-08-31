@@ -17,6 +17,7 @@ course:
         slug: normal-session
         title: A normal session
         url: http://dummy.test/model/web/Session/?course_slug=courses/without-dates&session_slug=normal-session
+    timezone: Europe/Prague
     title: A plain vanilla course
     url: http://dummy.test/model/web/Course/?course_slug=courses/without-dates
     vars: {}
