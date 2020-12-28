@@ -5,11 +5,6 @@ import re
 from fnmatch import fnmatch
 import shutil
 
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo
-
 import yaml
 from arca import Task
 
@@ -21,13 +16,13 @@ from naucse.converters import dump, load, get_converter, get_schema
 from naucse import sanitize
 from naucse import arca_renderer
 from naucse.logger import logger
+from naucse.datetimes import SessionTimeConverter, DateConverter
+from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
+from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 
 import naucse_render
 
 API_VERSION = 0, 3
-
-# Before API 0.3, a fixed timezone was assumed
-_OLD_DEFAULT_TIMEZONE = zoneinfo.ZoneInfo('Europe/Prague')
 
 
 class NoURL(LookupError):
@@ -452,82 +447,6 @@ def set_prev_next(sequence):
         now.next = next
 
 
-def _strptime_with_optional_z(data, dateformat):
-    """Like datetime.strptime, but with possibly empty timezone for %z
-
-    If there is no timezone offset, the "%z" is ignored and a naive datetime
-    object is returned.
-    """
-    if not ('+' in data or '-' in data):
-        dateformat = dateformat.replace('%z', '')
-    return datetime.datetime.strptime(data, dateformat)
-
-
-class SessionTimeConverter(BaseConverter):
-    """Convert a session time, represented in JSON as string
-
-    May be loaded as a complete datetime, or as just date or None, which need
-    to be fixed up using `Session._fix_time`.
-
-    May contain a timezone offset on input. If not, needs to be fixed up using
-    `Session._fix_time`.
-
-    Converted to the full datetime on output.
-    """
-    def load(self, data, context):
-        if data.count(':') == 2:
-            time_format = '%H:%M:%S'
-        else:
-            time_format = '%H:%M'
-        try:
-            return _strptime_with_optional_z(data, f'%Y-%m-%d {time_format}%z')
-        except ValueError:
-            return _strptime_with_optional_z(data, f'{time_format}%z').timetz()
-
-    def dump(self, value, context):
-        if context.version < (0, 3):
-            value = value.astimezone(_OLD_DEFAULT_TIMEZONE)
-            return value.strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            return value.strftime('%Y-%m-%d %H:%M:%S%z')
-
-    @classmethod
-    def get_schema(cls, context):
-        _date_re = '[0-9]{4}-[0-9]{2}-[0-9]{2}'
-        if context.version < (0, 3):
-            _tz_re = ''
-            _optional_tz_re = ''
-        else:
-            _tz_re = '[+-][0-9]{4}'
-            _optional_tz_re = f'({_tz_re})?'
-        if context.is_input:
-            _time_re = '[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?'
-            pattern = f'^({_date_re} )?{_time_re}{_optional_tz_re}$'
-        else:
-            _time_re = '[0-9]{2}:[0-9]{2}:[0-9]{2}'
-            pattern = f'^{_date_re} {_time_re}{_tz_re}$'
-        return {
-            'type': 'string',
-            'pattern': pattern,
-        }
-
-
-class DateConverter(BaseConverter):
-    """Converter for datetime.date values (as 'YYYY-MM-DD' strings in JSON)"""
-    def load(self, data, context):
-        return datetime.datetime.strptime(data, "%Y-%m-%d").date()
-
-    def dump(self, value, context):
-        return str(value)
-
-    def get_schema(self, context):
-        return {
-            'type': 'string',
-            'pattern': r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$',
-            'format': 'date',
-        }
-
-
 class Session(Model):
     """A smaller collection of teaching materials
 
@@ -600,41 +519,10 @@ class Session(Model):
 
     @time.after_load()
     def _fix_time(self, context):
-        if self.time is None:
-            self.time = {}
-        else:
-            if set(self.time) != {'start', 'end'}:
-                raise ValueError('Session time may must have start and end')
-        result = {}
-        for kind in 'start', 'end':
-            time = self.time.get(kind, None)
-            if isinstance(time, datetime.datetime):
-                pass
-            elif isinstance(time, datetime.time):
-                if self.date:
-                    time = datetime.datetime.combine(self.date, time)
-                else:
-                    self.time = None
-                    return
-            elif time is None:
-                if self.date and self.course.default_time:
-                    time = datetime.datetime.combine(
-                        self.date, self.course.default_time[kind],
-                    )
-                else:
-                    self.time = None
-                    return
-            else:
-                raise TypeError(time)
-            if time.tzinfo is None:
-                if self.course.timezone is None:
-                    raise ValueError(
-                        f'{kind} time of session {self.slug} is missing '
-                        + 'timezone information. Provide an offset or set '
-                        + 'a timezone for the whole course.')
-                time = time.replace(tzinfo=self.course.timezone)
-            result[kind] = time
-        self.time = result
+        self.time = fix_session_time(
+            self.time, self.date, self.course.default_time,
+            self.course.timezone, self.slug,
+        )
 
 
 class AnyDictConverter(BaseConverter):
@@ -648,54 +536,6 @@ class AnyDictConverter(BaseConverter):
     @classmethod
     def get_schema(cls, context):
         return {'type': 'object'}
-
-
-def time_from_string(time_string):
-    """Get datetime.time object from a 'HH:MM' or 'HH:MM+ZZZZ' string"""
-    return _strptime_with_optional_z(time_string, '%H:%M').timetz()
-
-
-class TimeIntervalConverter(BaseConverter):
-    """Converter for a time interval, as a dict with 'start' and 'end'"""
-    def load(self, data, context):
-        return {
-            'start': time_from_string(data['start']),
-            'end': time_from_string(data['end']),
-        }
-
-    def dump(self, value, context):
-        time_format = '%H:%M'
-        return {
-            'start': value['start'].strftime(time_format),
-            'end': value['end'].strftime(time_format),
-        }
-
-    @classmethod
-    def get_schema(cls, context):
-        return {
-            'type': 'object',
-            'properties': {
-                'start': {'type': 'string', 'pattern': '[0-9]{1,2}:[0-9]{2}'},
-                'end': {'type': 'string', 'pattern': '[0-9]{1,2}:[0-9]{2}'},
-            },
-            'required': ['start', 'end'],
-            'additionalProperties': False,
-        }
-
-
-class ZoneInfoConverter(BaseConverter):
-    def load(self, data, context):
-        return zoneinfo.ZoneInfo(data)
-
-    def dump(self, value, context):
-        return value.key
-
-    @classmethod
-    def get_schema(cls, context):
-        return {
-            'type': 'string',
-            'pattern': '[A-Za-z0-9/+_-]+'
-        }
 
 
 class _LessonsDict(collections.abc.Mapping):
