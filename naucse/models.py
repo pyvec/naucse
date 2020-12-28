@@ -5,8 +5,11 @@ import re
 from fnmatch import fnmatch
 import shutil
 
-import dateutil
-import dateutil.tz
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
 import yaml
 from arca import Task
 
@@ -24,8 +27,7 @@ import naucse_render
 API_VERSION = 0, 3
 
 # Before API 0.3, a fixed timezone was assumed
-_OLD_DEFAULT_TIMEZONE_NAME = 'Europe/Prague'
-_OLD_DEFAULT_TIMEZONE = dateutil.tz.gettz(_OLD_DEFAULT_TIMEZONE_NAME)
+_OLD_DEFAULT_TIMEZONE = zoneinfo.ZoneInfo('Europe/Prague')
 
 
 class NoURL(LookupError):
@@ -681,6 +683,21 @@ class TimeIntervalConverter(BaseConverter):
         }
 
 
+class ZoneInfoConverter(BaseConverter):
+    def load(self, data, context):
+        return zoneinfo.ZoneInfo(data)
+
+    def dump(self, value, context):
+        return value.key
+
+    @classmethod
+    def get_schema(cls, context):
+        return {
+            'type': 'string',
+            'pattern': '[A-Za-z0-9/+_-]+'
+        }
+
+
 class _LessonsDict(collections.abc.Mapping):
     """Dict of lessons with lazily loaded entries"""
     def __init__(self, course):
@@ -756,26 +773,19 @@ class Course(Model):
         TimeIntervalConverter(), optional=True,
         doc="Default start and end time for sessions")
 
-    # There's no good way to get the name from a timezone object,
-    # so keep a `_timezone_name` string, and set `timezone` from it.
-    _timezone_name = VersionField({
+    timezone = VersionField({
         (0, 3): Field(
-            str, data_key='timezone', optional=True,
+            ZoneInfoConverter(), data_key='timezone', optional=True,
             doc="Timezone for times specified without a timezone (i.e. as "
                 + "HH:MM (rather than HH:MM+ZZZZ). "
                 + "Mandatory if such times appear in the course."
         )
     })
 
-    @_timezone_name.after_load()
+    @timezone.after_load()
     def set_timezone(self, context):
-        if context.version < (0, 3):
-            self._timezone_name = _OLD_DEFAULT_TIMEZONE_NAME
+        if self.timezone is None and context.version < (0, 3):
             self.timezone = _OLD_DEFAULT_TIMEZONE
-        elif self._timezone_name:
-            self.timezone = dateutil.tz.gettz(self._timezone_name)
-        else:
-            self.timezone = None
 
     sessions = Field(
         KeyAttrDictConverter(Session, key_attr='slug', index_arg='index'),

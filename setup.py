@@ -16,7 +16,6 @@ setup(
     install_requires=[
         'elsa',
         'ics',
-        'python-dateutil',
         'arca[docker]',
         'cssutils',
         'PyYAML',
@@ -26,6 +25,8 @@ setup(
         'jsonschema',
         'lxml',
         'naucse-render',
+        'backports.zoneinfo; python_version<"3.9"',
+        'tzdata; sys_platform=="win32"',
     ],
     extras_require={
         'dev': ['tox', 'pytest'],

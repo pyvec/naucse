@@ -91,6 +91,7 @@ definitions:
 
 
                     Added in API version 0.3'
+                pattern: '[A-Za-z0-9/+_-]+'
                 type: string
             title:
                 description: Human-readable title

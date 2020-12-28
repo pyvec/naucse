@@ -1,14 +1,18 @@
 import datetime
 
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
 import pytest
-import dateutil.tz
 import jsonschema
 
 from naucse import models
 from test_naucse.conftest import fixture_path, add_test_course
 
 
-TZINFO = dateutil.tz.gettz('Europe/Prague')
+TZINFO = zoneinfo.ZoneInfo('Europe/Prague')
 
 
 SESSIONS = [
@@ -226,7 +230,7 @@ def test_course_api02_ok_without_timezone(model):
     course = model.courses['courses/test']
     assert course.timezone is None
     assert course.sessions['specified-session'].date is None
-    tzinfo = dateutil.tz.tzoffset('+0100', 3600)
+    tzinfo = datetime.timezone(datetime.timedelta(hours=1))
     assert course.sessions['specified-session'].time == {
         'start': datetime.datetime(2019, 1, 1, 18, 0, tzinfo=tzinfo),
         'end': datetime.datetime(2019, 1, 1, 20, 0, tzinfo=tzinfo),
