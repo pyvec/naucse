@@ -38,6 +38,14 @@ def test_allow_attributes():
         </div>
     """)
 
+
+def test_allow_data_attributes():
+    assert_unchanged("""
+        <div data-index="0">
+            <span data-number="1"><em data-pos="2">Text</em></span>
+        </div>
+    """)
+
 def test_disallow_relative_url():
     with pytest.raises(naucse.sanitize.DisallowedLink):
         sanitize_html("""

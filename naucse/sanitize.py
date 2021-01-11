@@ -57,6 +57,7 @@ ALLOWED_ATTRIBUTES = {
     'id',   # XXX: validate id's
     'aria-hidden',
     'title',
+    # Also, arbitrary "data-*" attributes are allowed.
 }
 PER_TAG_ATTRIBUTES = {
     'a': {'href'},
@@ -157,6 +158,9 @@ def sanitize_element(element, *, naucse_urls=None):
         if attr_name == 'style':
             # XXX: Sanitize attributes
             # del element.attrib[attr_name]
+            continue
+
+        if attr_name.startswith('data-'):
             continue
 
         if attr_name in {'href', 'src'}:
