@@ -1,4 +1,5 @@
-from jinja2 import Markup, StrictUndefined
+from markupsafe import Markup
+from jinja2 import StrictUndefined
 import mistune
 
 from .sanitize import sanitize_html

@@ -27,6 +27,7 @@ setup(
         'naucse-render',
         'backports.zoneinfo; python_version<"3.9"',
         'tzdata; sys_platform=="win32"',
+        'markupsafe',
     ],
     extras_require={
         'dev': ['tox', 'pytest'],

@@ -1,7 +1,7 @@
 from urllib.parse import urlsplit, urlunsplit, parse_qsl
 import re
 
-from jinja2 import Markup
+from markupsafe import Markup
 import lxml.html
 import lxml.etree
 import cssutils
