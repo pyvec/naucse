@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='naucse',
-    version='0.3',
+    version='0.3.1',
     description='Website for course materials',
     long_description=Path('README.md').read_text(),
     long_description_content_type='text/markdown',
