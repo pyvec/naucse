@@ -6,10 +6,11 @@ import naucse_render
 
 class LocalRenderer:
     """Renders a local course using the `naucse_render` module."""
-    def __init__(self, *, path, slug):
+    def __init__(self, *, path, slug, repo_info):
         self.path = Path(path).resolve()
         self.version = 1
         self.slug = slug
+        self.repo_info = repo_info
 
     def get_course(self):
         """Return information about a course"""
@@ -30,3 +31,6 @@ class LocalRenderer:
         (A filename will likely be better for performance.)
         """
         return safe_join(self.path, path)
+
+    def get_repo_info(self):
+        return self.repo_info

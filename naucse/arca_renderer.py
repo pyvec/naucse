@@ -8,6 +8,7 @@ from arca import Task
 from werkzeug.security import safe_join
 
 from naucse.exceptions import UntrustedRepo
+from naucse.edit_info import get_repo_info
 
 
 NAUCSE_URL_RE = re.compile(
@@ -25,7 +26,8 @@ class Renderer:
     This renderer additionally populates the course 'etag', if the
     remote task doesn't return it.
     """
-    def __init__(self, arca, url, branch, *, slug, trusted_repo_patterns):
+    def __init__(self, arca, repo, branch, *, slug, trusted_repo_patterns):
+        url = repo
         self.version = 1
         self.arca = arca
         self.url = url
@@ -84,3 +86,6 @@ class Renderer:
 
     def get_path_or_file(self, path):
         return safe_join(self.worktree_path, path)
+
+    def get_repo_info(self):
+        return get_repo_info(self.url, self.branch)

@@ -561,12 +561,12 @@ class Course(Model):
     pk_name = 'slug'
 
     def __init__(
-        self, *, parent, slug, repo_info, is_meta=False,
-        canonical=False,
+        self, *, parent, slug, renderer, is_meta=False, canonical=False,
     ):
         super().__init__(parent=parent)
-        self.repo_info = repo_info
         self.slug = slug
+        self.renderer = renderer
+        self.repo_info = renderer.get_repo_info()
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
@@ -670,27 +670,20 @@ class Course(Model):
 
     @classmethod
     def load_local(
-        cls, slug, *, parent, repo_info, renderer, canonical=False,
+        cls, slug, *, parent, renderer, canonical=False,
     ):
         data = renderer.get_course()
         is_meta = (slug == 'courses/meta')
         result = load(
-            cls, data, slug=slug, repo_info=repo_info, parent=parent,
+            cls, data, slug=slug, parent=parent, renderer=renderer,
             is_meta=is_meta, canonical=canonical,
         )
-        result.repo_info = repo_info
-        result.renderer = renderer
         return result
 
     @classmethod
-    def load_remote(cls, slug, *, parent, link_info, renderer_class):
-        url = link_info['repo']
-        branch = link_info.get('branch', 'master')
-        renderer = renderer_class(url=url, branch=branch, slug=slug)
-        return cls.load_local(
-            slug, parent=parent, repo_info=get_repo_info(url, branch),
-            renderer=renderer,
-        )
+    def load_remote(cls, slug, *, parent, kwargs, renderer_class):
+        renderer = renderer_class(slug=slug, **kwargs)
+        return cls.load_local(slug, parent=parent, renderer=renderer)
 
     # XXX: Is course derivation useful?
     derives = Field(
@@ -922,7 +915,7 @@ class Root(Model):
                     link_info = yaml.safe_load(f)
                 try:
                     course = Course.load_remote(
-                        slug, parent=self, link_info=link_info,
+                        slug, parent=self, kwargs=link_info,
                         renderer_class=self.renderers['arca'],
                     )
                 except UntrustedRepo as e:
@@ -930,9 +923,13 @@ class Root(Model):
                 else:
                     self.add_course(course)
             if (course_path / 'info.yml').is_file():
-                renderer = self.renderers['local'](path=path, slug=slug)
+                renderer = self.renderers['local'](
+                    path=path,
+                    slug=slug,
+                    repo_info=self.repo_info,
+                )
                 course = Course.load_local(
-                    slug, parent=self, repo_info=self.repo_info,
+                    slug, parent=self,
                     canonical=canonical_if_local,
                     renderer=renderer,
                 )
@@ -954,10 +951,13 @@ class Root(Model):
                         _load_local_course(course_path, slug)
 
         if lesson_path.exists():
-            renderer = self.renderers['local'](path=path, slug='lessons')
+            renderer = self.renderers['local'](
+                path=path,
+                slug='lessons',
+                repo_info=self.repo_info,
+            )
             self.add_course(Course.load_local(
                 'lessons',
-                repo_info=self.repo_info,
                 canonical=True,
                 parent=self,
                 renderer=renderer,
