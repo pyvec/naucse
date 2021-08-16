@@ -669,7 +669,7 @@ class Course(Model):
     )
 
     @classmethod
-    def load_local(
+    def from_renderer(
         cls, slug, *, parent, renderer, canonical=False,
     ):
         data = renderer.get_course()
@@ -679,11 +679,6 @@ class Course(Model):
             is_meta=is_meta, canonical=canonical,
         )
         return result
-
-    @classmethod
-    def load_remote(cls, slug, *, parent, kwargs, renderer_class):
-        renderer = renderer_class(slug=slug, **kwargs)
-        return cls.load_local(slug, parent=parent, renderer=renderer)
 
     # XXX: Is course derivation useful?
     derives = Field(
@@ -914,9 +909,9 @@ class Root(Model):
                 with link_path.open() as f:
                     link_info = yaml.safe_load(f)
                 try:
-                    course = Course.load_remote(
-                        slug, parent=self, kwargs=link_info,
-                        renderer_class=self.renderers['arca'],
+                    renderer = self.renderers['arca'](slug=slug, **link_info)
+                    course = Course.from_renderer(
+                        slug, parent=self, renderer=renderer,
                     )
                 except UntrustedRepo as e:
                     logger.debug(f'Untrusted repo: {e.url}')
@@ -928,7 +923,7 @@ class Root(Model):
                     slug=slug,
                     repo_info=self.repo_info,
                 )
-                course = Course.load_local(
+                course = Course.from_renderer(
                     slug, parent=self,
                     canonical=canonical_if_local,
                     renderer=renderer,
@@ -956,7 +951,7 @@ class Root(Model):
                 slug='lessons',
                 repo_info=self.repo_info,
             )
-            self.add_course(Course.load_local(
+            self.add_course(Course.from_renderer(
                 'lessons',
                 canonical=True,
                 parent=self,
