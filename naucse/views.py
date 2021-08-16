@@ -1,6 +1,5 @@
 import datetime
 from pathlib import Path
-import functools
 import calendar
 import os
 
@@ -101,10 +100,13 @@ def init_model():
             'schema', model_slug=m.model_slug,
             is_input=is_input, **kw),
         renderers={
-            'arca': functools.partial(arca_renderer.Renderer, arca),
+            'arca': lambda **kwargs: arca_renderer.Renderer(
+                arca,
+                **kwargs,
+                trusted_repo_patterns=trusted_repo_patterns,
+            ),
             'local': lambda: naucse_render,
         },
-        trusted_repo_patterns=trusted_repo_patterns,
     )
 
 

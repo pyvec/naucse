@@ -2,7 +2,6 @@ import datetime
 from pathlib import Path
 import collections.abc
 import re
-from fnmatch import fnmatch
 import shutil
 
 import yaml
@@ -17,6 +16,7 @@ from naucse.logger import logger
 from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
+from naucse.exceptions import UntrustedRepo
 
 
 API_VERSION = 0, 3
@@ -872,7 +872,6 @@ class Root(Model):
         url_factories=None,
         schema_url_factory=None,
         renderers={},
-        trusted_repo_patterns=(),
         repo_info=None,
     ):
         self.root = self
@@ -880,7 +879,6 @@ class Root(Model):
         self.schema_url_factory = schema_url_factory
         super().__init__(parent=self)
         self.renderers = renderers
-        self.trusted_repo_patterns = trusted_repo_patterns
 
         self.courses = {}
         self.run_years = {}
@@ -929,17 +927,15 @@ class Root(Model):
             if link_path.is_file():
                 with link_path.open() as f:
                     link_info = yaml.safe_load(f)
-                checked_url = '{repo}#{branch}'.format(**link_info)
-                if any(
-                    fnmatch(checked_url, l) for l in self.trusted_repo_patterns
-                ):
+                try:
                     course = Course.load_remote(
                         slug, parent=self, link_info=link_info,
                         renderer=self.renderers['arca'],
                     )
-                    self.add_course(course)
+                except UntrustedRepo as e:
+                    logger.debug(f'Untrusted repo: {e.url}')
                 else:
-                    logger.debug(f'Untrusted repo: {checked_url}')
+                    self.add_course(course)
             if (course_path / 'info.yml').is_file():
                 course = Course.load_local(
                     slug, parent=self, repo_info=self.repo_info, path=path,

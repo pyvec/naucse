@@ -2,10 +2,11 @@ from pathlib import Path
 import contextlib
 import shutil
 import re
+from fnmatch import fnmatch
 
 from arca import Task
 
-import naucse_render
+from naucse.exceptions import UntrustedRepo
 
 
 NAUCSE_URL_RE = re.compile(
@@ -25,10 +26,14 @@ class Renderer:
     This renderer additionally populates the course 'etag', if the
     remote task doesn't return it.
     """
-    def __init__(self, arca, url, branch):
+    def __init__(self, arca, url, branch, *, trusted_repo_patterns):
         self.arca = arca
         self.url = url
         self.branch = branch
+
+        checked_url = f'{url}#{branch}'
+        if not any(fnmatch(checked_url, l) for l in trusted_repo_patterns):
+            raise UntrustedRepo(checked_url)
 
         readme_path = arca.static_filename(url, branch, 'README.md')
         self.worktree_path = Path(readme_path).parent
