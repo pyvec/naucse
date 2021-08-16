@@ -2,9 +2,11 @@ import datetime
 from pathlib import Path
 import collections.abc
 import re
+import os
 import shutil
 
 import yaml
+from arca import Arca
 
 from naucse.edit_info import get_local_repo_info, get_repo_info
 from naucse.converters import Field, VersionField, register_model
@@ -17,6 +19,7 @@ from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 from naucse.exceptions import UntrustedRepo
+from naucse import arca_renderer, local_renderer
 
 
 API_VERSION = 0, 3
@@ -847,6 +850,8 @@ class Root(Model):
     """Data for the naucse website
 
     Contains a collection of courses plus additional metadata.
+
+    Also responsible for loading the courses from (meta)data on disk.
     """
     def __init__(
         self, *,
@@ -871,6 +876,31 @@ class Root(Model):
         # For pagination of runs
         # XXX: This shouldn't be necessary
         self.explicit_run_years = set()
+
+        # Repos we trust for code execution
+        trusted = os.environ.get('NAUCSE_TRUSTED_REPOS', None)
+        if trusted is None:
+            self.trusted_repo_patterns = ()
+        else:
+            self.trusted_repo_patterns = tuple(
+                line for line in trusted.split() if line
+            )
+
+        # Arca object for the Arca backend
+        self.arca = Arca(settings={
+            "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
+            "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
+            "ARCA_BACKEND_VERBOSITY": 2,
+            "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
+            "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
+            "ARCA_SINGLE_PULL": True,
+            "ARCA_IGNORE_CACHE_ERRORS": True,
+            "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
+            "ARCA_CACHE_BACKEND_ARGUMENTS": {
+                "filename": ".arca/cache/naucse.dbm"
+            },
+            "ARCA_BASE_DIR": str(Path('.arca').resolve()),
+        })
 
     pk_name = None
 
@@ -909,7 +939,12 @@ class Root(Model):
                 with link_path.open() as f:
                     link_info = yaml.safe_load(f)
                 try:
-                    renderer = self.renderers['arca'](slug=slug, **link_info)
+                    renderer = arca_renderer.Renderer(
+                        self.arca,
+                        slug=slug,
+                        **link_info,
+                        trusted_repo_patterns=self.trusted_repo_patterns,
+                    )
                     course = Course.from_renderer(
                         slug, parent=self, renderer=renderer,
                     )
@@ -918,7 +953,7 @@ class Root(Model):
                 else:
                     self.add_course(course)
             if (course_path / 'info.yml').is_file():
-                renderer = self.renderers['local'](
+                renderer = local_renderer.LocalRenderer(
                     path=path,
                     slug=slug,
                     repo_info=self.repo_info,
@@ -946,7 +981,7 @@ class Root(Model):
                         _load_local_course(course_path, slug)
 
         if lesson_path.exists():
-            renderer = self.renderers['local'](
+            renderer = local_renderer.LocalRenderer(
                 path=path,
                 slug='lessons',
                 repo_info=self.repo_info,

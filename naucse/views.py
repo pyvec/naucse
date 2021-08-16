@@ -6,12 +6,10 @@ import os
 from flask import Flask, render_template, jsonify, url_for, Response, abort, g, redirect
 from flask import send_file
 import ics
-from arca import Arca
 
 from naucse import models
 from naucse.urlconverters import register_url_converters
 from naucse.templates import setup_jinja_env
-from naucse import arca_renderer, local_renderer
 
 app = Flask('naucse')
 app.config['JSON_AS_ASCII'] = False
@@ -54,27 +52,6 @@ def _get_model():
 
 
 def init_model():
-    trusted = os.environ.get('NAUCSE_TRUSTED_REPOS', None)
-    if trusted is None:
-        trusted_repo_patterns = ()
-    else:
-        trusted_repo_patterns = tuple(
-            line for line in trusted.split() if line
-        )
-    arca=Arca(settings={
-        "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
-        "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
-        "ARCA_BACKEND_VERBOSITY": 2,
-        "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
-        "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
-        "ARCA_SINGLE_PULL": True,
-        "ARCA_IGNORE_CACHE_ERRORS": True,
-        "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
-        "ARCA_CACHE_BACKEND_ARGUMENTS": {
-            "filename": ".arca/cache/naucse.dbm"
-        },
-        "ARCA_BASE_DIR": str(Path('.arca').resolve()),
-    })
     return models.Root(
         url_factories={
             'api': {
@@ -98,14 +75,6 @@ def init_model():
         schema_url_factory=lambda m, is_input, **kw: url_for(
             'schema', model_slug=m.model_slug,
             is_input=is_input, **kw),
-        renderers={
-            'arca': lambda **kwargs: arca_renderer.Renderer(
-                arca,
-                **kwargs,
-                trusted_repo_patterns=trusted_repo_patterns,
-            ),
-            'local': local_renderer.LocalRenderer,
-        },
     )
 
 
