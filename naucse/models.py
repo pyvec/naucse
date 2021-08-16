@@ -6,7 +6,6 @@ from fnmatch import fnmatch
 import shutil
 
 import yaml
-from arca import Task
 
 from naucse.edit_info import get_local_repo_info, get_repo_info
 from naucse.converters import Field, VersionField, register_model
@@ -14,13 +13,11 @@ from naucse.converters import BaseConverter, ListConverter, DictConverter
 from naucse.converters import KeyAttrDictConverter, ModelConverter
 from naucse.converters import dump, load, get_converter, get_schema
 from naucse import sanitize
-from naucse import arca_renderer
 from naucse.logger import logger
 from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 
-import naucse_render
 
 API_VERSION = 0, 3
 
@@ -676,8 +673,10 @@ class Course(Model):
     @classmethod
     def load_local(
         cls, slug, *, parent, repo_info, path='.', canonical=False,
-        renderer=naucse_render
+        renderer=None
     ):
+        if renderer is None:
+            renderer = parent.root.renderers['local']()
         path = Path(path).resolve()
         data = renderer.get_course(slug, version=1, path=path)
         is_meta = (slug == 'courses/meta')
@@ -690,10 +689,10 @@ class Course(Model):
         return result
 
     @classmethod
-    def load_remote(cls, slug, *, parent, link_info):
+    def load_remote(cls, slug, *, parent, link_info, renderer):
         url = link_info['repo']
         branch = link_info.get('branch', 'master')
-        renderer = arca_renderer.Renderer(parent.arca, url, branch)
+        renderer = renderer(url=url, branch=branch)
         return cls.load_local(
             slug, parent=parent, repo_info=get_repo_info(url, branch),
             path=renderer.worktree_path,
@@ -872,7 +871,7 @@ class Root(Model):
         self, *,
         url_factories=None,
         schema_url_factory=None,
-        arca=None,
+        renderers={},
         trusted_repo_patterns=(),
         repo_info=None,
     ):
@@ -880,7 +879,7 @@ class Root(Model):
         self.url_factories = url_factories or {}
         self.schema_url_factory = schema_url_factory
         super().__init__(parent=self)
-        self.arca = arca
+        self.renderers = renderers
         self.trusted_repo_patterns = trusted_repo_patterns
 
         self.courses = {}
@@ -936,6 +935,7 @@ class Root(Model):
                 ):
                     course = Course.load_remote(
                         slug, parent=self, link_info=link_info,
+                        renderer=self.renderers['arca'],
                     )
                     self.add_course(course)
                 else:
