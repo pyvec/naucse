@@ -22,8 +22,6 @@ class RemoteRepoError(Exception):
 class Renderer:
     """Render courses from a remote repository using Arca
 
-    Renderer objects have the same API as the `naucse_render` module.
-
     This renderer additionally populates the course 'etag', if the
     remote task doesn't return it.
     """
