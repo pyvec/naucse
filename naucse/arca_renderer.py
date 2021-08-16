@@ -28,6 +28,7 @@ class Renderer:
     remote task doesn't return it.
     """
     def __init__(self, arca, url, branch, *, trusted_repo_patterns):
+        self.version = 1
         self.arca = arca
         self.url = url
         self.branch = branch
@@ -51,11 +52,11 @@ class Renderer:
                 + f'repo {self.url!r}, branch {self.branch!r}'
             ) from e
 
-    def get_course(self, slug, *, version):
+    def get_course(self, slug):
         task = Task(
             entry_point="naucse_render:get_course",
             args=[slug],
-            kwargs={'version': version, 'path': '.'},
+            kwargs={'version': self.version, 'path': '.'},
         )
         with self.wrap_errors('get_course', slug):
             info = self.arca.run(self.url, self.branch, task).output

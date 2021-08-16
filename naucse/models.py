@@ -672,7 +672,7 @@ class Course(Model):
     def load_local(
         cls, slug, *, parent, repo_info, renderer, canonical=False,
     ):
-        data = renderer.get_course(slug, version=1)
+        data = renderer.get_course(slug)
         is_meta = (slug == 'courses/meta')
         result = load(
             cls, data, slug=slug, repo_info=repo_info, parent=parent,
