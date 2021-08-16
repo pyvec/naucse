@@ -5,6 +5,7 @@ import re
 from fnmatch import fnmatch
 
 from arca import Task
+from werkzeug.security import safe_join
 
 from naucse.exceptions import UntrustedRepo
 
@@ -50,7 +51,7 @@ class Renderer:
                 + f'repo {self.url!r}, branch {self.branch!r}'
             ) from e
 
-    def get_course(self, slug, *, version, path):
+    def get_course(self, slug, *, version):
         task = Task(
             entry_point="naucse_render:get_course",
             args=[slug],
@@ -66,7 +67,7 @@ class Renderer:
 
         return info
 
-    def get_lessons(self, lesson_slugs, *, vars, path):
+    def get_lessons(self, lesson_slugs, *, vars):
         # Default timeout is 5s; multiply this by the no. of requested lessons
         timeout = 5 * len(lesson_slugs)
         task = Task(
@@ -79,3 +80,7 @@ class Renderer:
             info = self.arca.run(self.url, self.branch, task).output
 
         return info
+
+
+    def get_path_or_file(self, path):
+        return safe_join(self.worktree_path, path)

@@ -1,18 +1,17 @@
 import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import calendar
 import os
 
 from flask import Flask, render_template, jsonify, url_for, Response, abort, g, redirect
-from flask import send_from_directory
+from flask import send_file
 import ics
 from arca import Arca
-import naucse_render
 
 from naucse import models
 from naucse.urlconverters import register_url_converters
 from naucse.templates import setup_jinja_env
-from naucse import arca_renderer
+from naucse import arca_renderer, local_renderer
 
 app = Flask('naucse')
 app.config['JSON_AS_ASCII'] = False
@@ -105,7 +104,7 @@ def init_model():
                 **kwargs,
                 trusted_repo_patterns=trusted_repo_patterns,
             ),
-            'local': lambda: naucse_render,
+            'local': local_renderer.LocalRenderer,
         },
     )
 
@@ -325,8 +324,8 @@ def page_static(course_slug, lesson_slug, filename):
     except KeyError:
         raise abort(404)
 
-    print('sending', static.base_path, static.filename)
-    return send_from_directory(static.base_path, static.path)
+    path = PurePosixPath(filename)
+    return send_file(static.get_path_or_file(), download_name=path.name)
 
 
 def list_months(start_date, end_date):

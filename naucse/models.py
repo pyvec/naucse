@@ -219,12 +219,11 @@ class StaticFile(Model):
     pk_name = 'filename'
     parent_attrs = 'lesson', 'course'
 
-    @property
-    def base_path(self):
-        return self.course.base_path
-
     def get_pks(self):
         return {**self.parent.get_pks(), 'filename': self.filename}
+
+    def get_path_or_file(self):
+        return self.course.renderer.get_path_or_file(self.path)
 
     path = Field(RelativePathConverter(), doc="Relative path of the file")
 
@@ -562,13 +561,12 @@ class Course(Model):
     pk_name = 'slug'
 
     def __init__(
-        self, *, parent, slug, repo_info, base_path=None, is_meta=False,
+        self, *, parent, slug, repo_info, is_meta=False,
         canonical=False,
     ):
         super().__init__(parent=parent)
         self.repo_info = repo_info
         self.slug = slug
-        self.base_path = base_path
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
@@ -672,17 +670,13 @@ class Course(Model):
 
     @classmethod
     def load_local(
-        cls, slug, *, parent, repo_info, path='.', canonical=False,
-        renderer=None
+        cls, slug, *, parent, repo_info, renderer, canonical=False,
     ):
-        if renderer is None:
-            renderer = parent.root.renderers['local']()
-        path = Path(path).resolve()
-        data = renderer.get_course(slug, version=1, path=path)
+        data = renderer.get_course(slug, version=1)
         is_meta = (slug == 'courses/meta')
         result = load(
             cls, data, slug=slug, repo_info=repo_info, parent=parent,
-            base_path=path, is_meta=is_meta, canonical=canonical,
+            is_meta=is_meta, canonical=canonical,
         )
         result.repo_info = repo_info
         result.renderer = renderer
@@ -695,7 +689,6 @@ class Course(Model):
         renderer = renderer(url=url, branch=branch)
         return cls.load_local(
             slug, parent=parent, repo_info=get_repo_info(url, branch),
-            path=renderer.worktree_path,
             renderer=renderer,
         )
 
@@ -743,7 +736,7 @@ class Course(Model):
             raise Exception('course is frozen')
         slugs = set(slugs) - set(self._lessons)
         rendered = self.course.renderer.get_lessons(
-            slugs, vars=self.vars, path=self.base_path,
+            slugs, vars=self.vars,
         )
         new_lessons = load(
             DictConverter(Lesson, key_arg='slug'),
@@ -937,9 +930,11 @@ class Root(Model):
                 else:
                     self.add_course(course)
             if (course_path / 'info.yml').is_file():
+                renderer = self.renderers['local'](path=path)
                 course = Course.load_local(
-                    slug, parent=self, repo_info=self.repo_info, path=path,
+                    slug, parent=self, repo_info=self.repo_info,
                     canonical=canonical_if_local,
+                    renderer=renderer,
                 )
                 self.add_course(course)
 
@@ -959,12 +954,13 @@ class Root(Model):
                         _load_local_course(course_path, slug)
 
         if lesson_path.exists():
+            renderer = self.renderers['local'](path=path)
             self.add_course(Course.load_local(
                 'lessons',
                 repo_info=self.repo_info,
                 canonical=True,
                 parent=self,
-                path=path,
+                renderer=renderer,
             ))
         else:
             logger.warning(f'No lessons at {lesson_path}')
