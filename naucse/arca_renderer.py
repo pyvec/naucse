@@ -27,10 +27,11 @@ class Renderer:
     This renderer additionally populates the course 'etag', if the
     remote task doesn't return it.
     """
-    def __init__(self, arca, url, branch, *, trusted_repo_patterns):
+    def __init__(self, arca, url, branch, *, slug, trusted_repo_patterns):
         self.version = 1
         self.arca = arca
         self.url = url
+        self.slug = slug
         self.branch = branch
 
         checked_url = f'{url}#{branch}'
@@ -52,13 +53,13 @@ class Renderer:
                 + f'repo {self.url!r}, branch {self.branch!r}'
             ) from e
 
-    def get_course(self, slug):
+    def get_course(self):
         task = Task(
             entry_point="naucse_render:get_course",
-            args=[slug],
+            args=[self.slug],
             kwargs={'version': self.version, 'path': '.'},
         )
-        with self.wrap_errors('get_course', slug):
+        with self.wrap_errors('get_course', self.slug):
             info = self.arca.run(self.url, self.branch, task).output
             repo = self.arca.get_repo(self.url, self.branch)
             etag = self.arca.current_git_hash(self.url, self.branch, repo)

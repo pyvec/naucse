@@ -672,7 +672,7 @@ class Course(Model):
     def load_local(
         cls, slug, *, parent, repo_info, renderer, canonical=False,
     ):
-        data = renderer.get_course(slug)
+        data = renderer.get_course()
         is_meta = (slug == 'courses/meta')
         result = load(
             cls, data, slug=slug, repo_info=repo_info, parent=parent,
@@ -683,10 +683,10 @@ class Course(Model):
         return result
 
     @classmethod
-    def load_remote(cls, slug, *, parent, link_info, renderer):
+    def load_remote(cls, slug, *, parent, link_info, renderer_class):
         url = link_info['repo']
         branch = link_info.get('branch', 'master')
-        renderer = renderer(url=url, branch=branch)
+        renderer = renderer_class(url=url, branch=branch, slug=slug)
         return cls.load_local(
             slug, parent=parent, repo_info=get_repo_info(url, branch),
             renderer=renderer,
@@ -923,14 +923,14 @@ class Root(Model):
                 try:
                     course = Course.load_remote(
                         slug, parent=self, link_info=link_info,
-                        renderer=self.renderers['arca'],
+                        renderer_class=self.renderers['arca'],
                     )
                 except UntrustedRepo as e:
                     logger.debug(f'Untrusted repo: {e.url}')
                 else:
                     self.add_course(course)
             if (course_path / 'info.yml').is_file():
-                renderer = self.renderers['local'](path=path)
+                renderer = self.renderers['local'](path=path, slug=slug)
                 course = Course.load_local(
                     slug, parent=self, repo_info=self.repo_info,
                     canonical=canonical_if_local,
@@ -954,7 +954,7 @@ class Root(Model):
                         _load_local_course(course_path, slug)
 
         if lesson_path.exists():
-            renderer = self.renderers['local'](path=path)
+            renderer = self.renderers['local'](path=path, slug='lessons')
             self.add_course(Course.load_local(
                 'lessons',
                 repo_info=self.repo_info,
