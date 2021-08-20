@@ -850,15 +850,18 @@ class Root(Model):
     """Data for the naucse website
 
     Contains a collection of courses plus additional metadata.
-
-    Also responsible for loading the courses from (meta)data on disk.
     """
+    # Also responsible for loading the courses from (meta)data on disk.
+
     def __init__(
         self, *,
         url_factories=None,
         schema_url_factory=None,
         renderers={},
         repo_info=None,
+        # Overrides for tests:
+        arca=None,
+        trusted_repo_patterns=None,
     ):
         self.root = self
         self.url_factories = url_factories or {}
@@ -878,29 +881,33 @@ class Root(Model):
         self.explicit_run_years = set()
 
         # Repos we trust for code execution
-        trusted = os.environ.get('NAUCSE_TRUSTED_REPOS', None)
-        if trusted is None:
-            self.trusted_repo_patterns = ()
-        else:
-            self.trusted_repo_patterns = tuple(
-                line for line in trusted.split() if line
+        if trusted_repo_patterns is None:
+            trusted = os.environ.get(
+                'NAUCSE_TRUSTED_REPOS', None
             )
+            if trusted is not None:
+                trusted_repo_patterns = tuple(
+                    line for line in trusted.split() if line
+                )
+        self.trusted_repo_patterns = trusted_repo_patterns or ()
 
         # Arca object for the Arca backend
-        self.arca = Arca(settings={
-            "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
-            "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
-            "ARCA_BACKEND_VERBOSITY": 2,
-            "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
-            "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
-            "ARCA_SINGLE_PULL": True,
-            "ARCA_IGNORE_CACHE_ERRORS": True,
-            "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
-            "ARCA_CACHE_BACKEND_ARGUMENTS": {
-                "filename": ".arca/cache/naucse.dbm"
-            },
-            "ARCA_BASE_DIR": str(Path('.arca').resolve()),
-        })
+        if arca is None:
+            arca = Arca(settings={
+                "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
+                "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
+                "ARCA_BACKEND_VERBOSITY": 2,
+                "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
+                "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
+                "ARCA_SINGLE_PULL": True,
+                "ARCA_IGNORE_CACHE_ERRORS": True,
+                "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
+                "ARCA_CACHE_BACKEND_ARGUMENTS": {
+                    "filename": ".arca/cache/naucse.dbm"
+                },
+                "ARCA_BASE_DIR": str(Path('.arca').resolve()),
+            })
+        self.arca = arca
 
     pk_name = None
 

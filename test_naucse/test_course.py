@@ -7,38 +7,10 @@ from jsonschema.exceptions import ValidationError
 from naucse import models
 from naucse.edit_info import get_local_repo_info
 from naucse.converters import DuplicateKeyError
+from naucse.local_renderer import LocalRenderer
 
 from test_naucse.conftest import add_test_course, fixture_path
-
-class DummyRenderer:
-    """Renderer that returns courses/lessons from the given data
-
-    Mocks the get_lessons method of naucse_render or arca_renderer.Renderer.
-
-    As `course`, DummyRenderer expects a full API response, complete with
-    api_version.
-    The `lessons` argument should be a mapping of lesson slugs to full API
-    responses.
-
-    As of now, get_lessons only allows a single lesson slug.
-    """
-
-    def __init__(self, course=None, lessons=None):
-        self.course = course
-        self._lessons = lessons or {}
-
-    def get_course(self, slug, *, version, path):
-        return self.course
-
-    def get_lessons(self, lessons, *, vars, path):
-        [slug] = lessons
-        try:
-            return self._lessons[slug]
-        except KeyError as e:
-            raise DummyLessonNotFound(slug) from e
-
-class DummyLessonNotFound(LookupError):
-    """Raised by DummyRenderer when a lesson is not found"""
+from test_naucse.conftest import DummyRenderer, DummyLessonNotFound
 
 
 @pytest.fixture
@@ -111,9 +83,8 @@ def test_empty_course_from_renderer(model, assert_model_dump):
             }
         }
     )
-    course = models.Course.load_local(
+    course = models.Course.from_renderer(
         parent=model,
-        repo_info=get_local_repo_info('/dummy'),
         slug='courses/minimal',
         renderer=renderer,
     )
@@ -129,10 +100,10 @@ def load_course_from_fixture(model, filename):
 
     with (fixture_path / filename).open() as f:
         renderer = DummyRenderer(**yaml.safe_load(f))
-    course = models.Course.load_local(
+    slug = 'courses/complex'
+    course = models.Course.from_renderer(
         parent=model,
-        repo_info=get_local_repo_info('/dummy'),
-        slug='courses/complex',
+        slug=slug,
         renderer=renderer,
     )
     model.add_course(course)

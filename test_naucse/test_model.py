@@ -6,6 +6,7 @@ import yaml
 
 from naucse import models
 from naucse.edit_info import get_local_repo_info
+from naucse.local_renderer import LocalRenderer
 
 from test_naucse.conftest import fixture_path, dummy_schema_url_factory
 from test_naucse.conftest import add_test_course
@@ -77,14 +78,19 @@ def test_load_courses():
     assert model.courses['lessons'].slug == 'lessons'
 
 
-def test_add_local_course():
+def test_from_renderer():
     model = models.Root()
+    slug = 'courses/minimal'
     path = fixture_path / 'minimal-courses'
-    model.add_course(models.Course.load_local(
-        parent=model,
+    renderer = LocalRenderer(
         path=path,
         repo_info=get_local_repo_info(path),
-        slug='courses/minimal',
+        slug=slug,
+    )
+    model.add_course(models.Course.from_renderer(
+        slug=slug,
+        parent=model,
+        renderer=renderer,
     ))
 
     assert sorted(model.courses) == ['courses/minimal']
@@ -94,12 +100,18 @@ def test_add_local_course():
 
 
 def test_dump_local_course(model, assert_model_dump):
+    version=(0, 0)
     path = fixture_path / 'minimal-courses'
-    model.add_course(models.Course.load_local(
-        parent=model,
-        path=path,
+    slug = 'courses/minimal'
+    renderer=LocalRenderer(
         repo_info=get_local_repo_info(path),
-        slug='courses/minimal',
+        path=path,
+        slug=slug,
+    )
+    model.add_course(models.Course.from_renderer(
+        parent=model,
+        slug=slug,
+        renderer=renderer,
     ))
 
     assert_model_dump(model, 'minimal-root')

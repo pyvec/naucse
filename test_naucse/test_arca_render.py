@@ -9,7 +9,7 @@ import pytest
 from arca import Arca
 from arca.exceptions import BuildError
 
-from naucse import models
+from naucse import models, arca_renderer
 from naucse.arca_renderer import RemoteRepoError
 
 from test_naucse.conftest import fixture_path, make_model, get_local_repo_info
@@ -78,9 +78,18 @@ def arca_model(tmp_path, content_repo):
 
 def test_valid_fork(arca_model, content_repo, assert_model_dump):
     """Valid data can be loaded from a Git repository"""
-    course = models.Course.load_remote(
-        'courses/normal-course', parent=arca_model,
-        link_info={'repo': content_repo.as_uri()},
+    slug = 'courses/normal-course'
+    renderer = arca_renderer.Renderer(
+        arca=arca_model.arca,
+        slug=slug,
+        repo=content_repo.as_uri(),
+        branch='master',
+        trusted_repo_patterns=['*'],
+    )
+    course = models.Course.from_renderer(
+        slug=slug,
+        parent=arca_model,
+        renderer=renderer,
     )
     arca_model.add_course(course)
     assert_model_dump(course, 'normal-course')
@@ -96,11 +105,21 @@ def test_yaml_error(arca_model, content_repo, git_command):
 
     run([git_command, 'commit', '-a', '-m', 'Break YAML'], cwd=content_repo)
 
+    slug = 'courses/normal-course'
+    renderer = arca_renderer.Renderer(
+        arca=arca_model.arca,
+        slug=slug,
+        repo=content_repo.as_uri(),
+        branch='master',
+        trusted_repo_patterns=['*'],
+    )
+
     with pytest.raises(RemoteRepoError):
         try:
-            course = models.Course.load_remote(
-                'courses/normal-course', parent=arca_model,
-                link_info={'repo': content_repo.as_uri()},
+            course = models.Course.from_renderer(
+                slug=slug,
+                parent=arca_model,
+                renderer=renderer,
             )
         except RemoteRepoError as e:
             # Method, argument, repo is in the RemoteRepoError wrapper
@@ -139,9 +158,18 @@ def test_lesson_error(arca_model, content_repo, git_command):
     run([git_command, 'add', '.'], cwd=content_repo)
     run([git_command, 'commit', '-a', '-mAdd bad course'], cwd=content_repo)
 
-    course = models.Course.load_remote(
-        'courses/bad-course', parent=arca_model,
-        link_info={'repo': content_repo.as_uri()},
+    slug = 'courses/bad-course'
+    renderer = arca_renderer.Renderer(
+        arca=arca_model.arca,
+        slug=slug,
+        repo=content_repo.as_uri(),
+        branch='master',
+        trusted_repo_patterns=['*'],
+    )
+    course = models.Course.from_renderer(
+        slug=slug,
+        parent=arca_model,
+        renderer=renderer,
     )
 
     with pytest.raises(RemoteRepoError):
@@ -166,10 +194,19 @@ def test_removed_data(arca_model, content_repo, git_command):
     run([git_command, 'commit', '-a', '-m', 'Remove all data'], cwd=content_repo)
 
     with pytest.raises(RemoteRepoError):
+        link_info = {'repo': content_repo.as_uri(), 'branch': 'master'}
+        slug = 'courses/normal-course'
+        renderer = arca_renderer.Renderer(
+            arca=arca_model.arca,
+            slug=slug,
+            **link_info,
+            trusted_repo_patterns=arca_model.trusted_repo_patterns,
+        )
         try:
-            course = models.Course.load_remote(
-                'courses/normal-course', parent=arca_model,
-                link_info={'repo': content_repo.as_uri()},
+            course = models.Course.from_renderer(
+                slug=slug,
+                parent=arca_model,
+                renderer=renderer,
             )
         except RemoteRepoError as e:
             assert 'Task failed' in str(e.__cause__)
