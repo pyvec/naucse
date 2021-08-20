@@ -1,13 +1,11 @@
 import datetime
-from pathlib import Path
-import functools
+from pathlib import Path, PurePosixPath
 import calendar
 import os
 
 from flask import Flask, render_template, jsonify, url_for, Response, abort, g, redirect
-from flask import send_from_directory
+from flask import send_file
 import ics
-from arca import Arca
 
 from naucse import models
 from naucse.urlconverters import register_url_converters
@@ -54,13 +52,6 @@ def _get_model():
 
 
 def init_model():
-    trusted = os.environ.get('NAUCSE_TRUSTED_REPOS', None)
-    if trusted is None:
-        trusted_repo_patterns = ()
-    else:
-        trusted_repo_patterns = tuple(
-            line for line in trusted.split() if line
-        )
     return models.Root(
         url_factories={
             'api': {
@@ -84,21 +75,6 @@ def init_model():
         schema_url_factory=lambda m, is_input, **kw: url_for(
             'schema', model_slug=m.model_slug,
             is_input=is_input, **kw),
-        arca=Arca(settings={
-            "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
-            "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
-            "ARCA_BACKEND_VERBOSITY": 2,
-            "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
-            "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
-            "ARCA_SINGLE_PULL": True,
-            "ARCA_IGNORE_CACHE_ERRORS": True,
-            "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
-            "ARCA_CACHE_BACKEND_ARGUMENTS": {
-                "filename": ".arca/cache/naucse.dbm"
-            },
-            "ARCA_BASE_DIR": str(Path('.arca').resolve()),
-        }),
-        trusted_repo_patterns=trusted_repo_patterns,
     )
 
 
@@ -317,8 +293,8 @@ def page_static(course_slug, lesson_slug, filename):
     except KeyError:
         raise abort(404)
 
-    print('sending', static.base_path, static.filename)
-    return send_from_directory(static.base_path, static.path)
+    path = PurePosixPath(filename)
+    return send_file(static.get_path_or_file(), download_name=path.name)
 
 
 def list_months(start_date, end_date):

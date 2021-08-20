@@ -2,11 +2,11 @@ import datetime
 from pathlib import Path
 import collections.abc
 import re
-from fnmatch import fnmatch
+import os
 import shutil
 
 import yaml
-from arca import Task
+from arca import Arca
 
 from naucse.edit_info import get_local_repo_info, get_repo_info
 from naucse.converters import Field, VersionField, register_model
@@ -14,13 +14,13 @@ from naucse.converters import BaseConverter, ListConverter, DictConverter
 from naucse.converters import KeyAttrDictConverter, ModelConverter
 from naucse.converters import dump, load, get_converter, get_schema
 from naucse import sanitize
-from naucse import arca_renderer
 from naucse.logger import logger
 from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
+from naucse.exceptions import UntrustedRepo
+from naucse import arca_renderer, local_renderer
 
-import naucse_render
 
 API_VERSION = 0, 3
 
@@ -222,12 +222,11 @@ class StaticFile(Model):
     pk_name = 'filename'
     parent_attrs = 'lesson', 'course'
 
-    @property
-    def base_path(self):
-        return self.course.base_path
-
     def get_pks(self):
         return {**self.parent.get_pks(), 'filename': self.filename}
+
+    def get_path_or_file(self):
+        return self.course.renderer.get_path_or_file(self.path)
 
     path = Field(RelativePathConverter(), doc="Relative path of the file")
 
@@ -565,13 +564,12 @@ class Course(Model):
     pk_name = 'slug'
 
     def __init__(
-        self, *, parent, slug, repo_info, base_path=None, is_meta=False,
-        canonical=False,
+        self, *, parent, slug, renderer, is_meta=False, canonical=False,
     ):
         super().__init__(parent=parent)
-        self.repo_info = repo_info
         self.slug = slug
-        self.base_path = base_path
+        self.renderer = renderer
+        self.repo_info = renderer.get_repo_info()
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
@@ -674,31 +672,16 @@ class Course(Model):
     )
 
     @classmethod
-    def load_local(
-        cls, slug, *, parent, repo_info, path='.', canonical=False,
-        renderer=naucse_render
+    def from_renderer(
+        cls, slug, *, parent, renderer, canonical=False,
     ):
-        path = Path(path).resolve()
-        data = renderer.get_course(slug, version=1, path=path)
+        data = renderer.get_course()
         is_meta = (slug == 'courses/meta')
         result = load(
-            cls, data, slug=slug, repo_info=repo_info, parent=parent,
-            base_path=path, is_meta=is_meta, canonical=canonical,
+            cls, data, slug=slug, parent=parent, renderer=renderer,
+            is_meta=is_meta, canonical=canonical,
         )
-        result.repo_info = repo_info
-        result.renderer = renderer
         return result
-
-    @classmethod
-    def load_remote(cls, slug, *, parent, link_info):
-        url = link_info['repo']
-        branch = link_info.get('branch', 'master')
-        renderer = arca_renderer.Renderer(parent.arca, url, branch)
-        return cls.load_local(
-            slug, parent=parent, repo_info=get_repo_info(url, branch),
-            path=renderer.worktree_path,
-            renderer=renderer,
-        )
 
     # XXX: Is course derivation useful?
     derives = Field(
@@ -744,7 +727,7 @@ class Course(Model):
             raise Exception('course is frozen')
         slugs = set(slugs) - set(self._lessons)
         rendered = self.course.renderer.get_lessons(
-            slugs, vars=self.vars, path=self.base_path,
+            slugs, vars=self.vars,
         )
         new_lessons = load(
             DictConverter(Lesson, key_arg='slug'),
@@ -868,20 +851,23 @@ class Root(Model):
 
     Contains a collection of courses plus additional metadata.
     """
+    # Also responsible for loading the courses from (meta)data on disk.
+
     def __init__(
         self, *,
         url_factories=None,
         schema_url_factory=None,
-        arca=None,
-        trusted_repo_patterns=(),
+        renderers={},
         repo_info=None,
+        # Overrides for tests:
+        arca=None,
+        trusted_repo_patterns=None,
     ):
         self.root = self
         self.url_factories = url_factories or {}
         self.schema_url_factory = schema_url_factory
         super().__init__(parent=self)
-        self.arca = arca
-        self.trusted_repo_patterns = trusted_repo_patterns
+        self.renderers = renderers
 
         self.courses = {}
         self.run_years = {}
@@ -893,6 +879,35 @@ class Root(Model):
         # For pagination of runs
         # XXX: This shouldn't be necessary
         self.explicit_run_years = set()
+
+        # Repos we trust for code execution
+        if trusted_repo_patterns is None:
+            trusted = os.environ.get(
+                'NAUCSE_TRUSTED_REPOS', None
+            )
+            if trusted is not None:
+                trusted_repo_patterns = tuple(
+                    line for line in trusted.split() if line
+                )
+        self.trusted_repo_patterns = trusted_repo_patterns or ()
+
+        # Arca object for the Arca backend
+        if arca is None:
+            arca = Arca(settings={
+                "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
+                "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
+                "ARCA_BACKEND_VERBOSITY": 2,
+                "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
+                "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
+                "ARCA_SINGLE_PULL": True,
+                "ARCA_IGNORE_CACHE_ERRORS": True,
+                "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
+                "ARCA_CACHE_BACKEND_ARGUMENTS": {
+                    "filename": ".arca/cache/naucse.dbm"
+                },
+                "ARCA_BASE_DIR": str(Path('.arca').resolve()),
+            })
+        self.arca = arca
 
     pk_name = None
 
@@ -930,20 +945,30 @@ class Root(Model):
             if link_path.is_file():
                 with link_path.open() as f:
                     link_info = yaml.safe_load(f)
-                checked_url = '{repo}#{branch}'.format(**link_info)
-                if any(
-                    fnmatch(checked_url, l) for l in self.trusted_repo_patterns
-                ):
-                    course = Course.load_remote(
-                        slug, parent=self, link_info=link_info,
+                try:
+                    renderer = arca_renderer.Renderer(
+                        self.arca,
+                        slug=slug,
+                        **link_info,
+                        trusted_repo_patterns=self.trusted_repo_patterns,
                     )
-                    self.add_course(course)
+                    course = Course.from_renderer(
+                        slug, parent=self, renderer=renderer,
+                    )
+                except UntrustedRepo as e:
+                    logger.debug(f'Untrusted repo: {e.url}')
                 else:
-                    logger.debug(f'Untrusted repo: {checked_url}')
+                    self.add_course(course)
             if (course_path / 'info.yml').is_file():
-                course = Course.load_local(
-                    slug, parent=self, repo_info=self.repo_info, path=path,
+                renderer = local_renderer.LocalRenderer(
+                    path=path,
+                    slug=slug,
+                    repo_info=self.repo_info,
+                )
+                course = Course.from_renderer(
+                    slug, parent=self,
                     canonical=canonical_if_local,
+                    renderer=renderer,
                 )
                 self.add_course(course)
 
@@ -963,12 +988,16 @@ class Root(Model):
                         _load_local_course(course_path, slug)
 
         if lesson_path.exists():
-            self.add_course(Course.load_local(
-                'lessons',
+            renderer = local_renderer.LocalRenderer(
+                path=path,
+                slug='lessons',
                 repo_info=self.repo_info,
+            )
+            self.add_course(Course.from_renderer(
+                'lessons',
                 canonical=True,
                 parent=self,
-                path=path,
+                renderer=renderer,
             ))
         else:
             logger.warning(f'No lessons at {lesson_path}')

@@ -6,6 +6,7 @@ import os
 
 from naucse import models
 from naucse.edit_info import get_local_repo_info
+from naucse.local_renderer import LocalRenderer
 
 
 API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3))
@@ -28,6 +29,40 @@ class DummyURLFactories:
             base = 'http://dummy.test/model'
             return f'{base}/{self.url_type}/{cls.__name__}/?{args}'
         return dummy_url_factory
+
+
+class DummyRenderer:
+    """Renderer that returns courses/lessons from the given data
+
+    Mocks the get_lessons method of naucse_render or arca_renderer.Renderer.
+
+    As `course`, DummyRenderer expects a full API response, complete with
+    api_version.
+    The `lessons` argument should be a mapping of lesson slugs to full API
+    responses.
+
+    As of now, get_lessons only allows a single lesson slug.
+    """
+
+    def __init__(self, course=None, lessons=None):
+        self.course = course
+        self._lessons = lessons or {}
+
+    def get_course(self):
+        return self.course
+
+    def get_lessons(self, lessons, *, vars):
+        [slug] = lessons
+        try:
+            return self._lessons[slug]
+        except KeyError as e:
+            raise DummyLessonNotFound(slug) from e
+
+    def get_repo_info(self):
+        return get_local_repo_info('/dummy')
+
+class DummyLessonNotFound(LookupError):
+    """Raised by DummyRenderer when a lesson is not found"""
 
 
 def make_model(**extra_kwargs):
@@ -95,14 +130,12 @@ def assert_model_dump(request):
 
 
 def add_test_course(model, slug, data, version=(0, 0)):
-    model.add_course(models.load(
-        models.Course,
+    renderer = DummyRenderer({
+        'api_version': list(version),
+        'course': data,
+    })
+    model.add_course(models.Course.from_renderer(
+        renderer=renderer,
         slug=slug,
-        repo_info=get_local_repo_info(fixture_path),
         parent=model,
-        data={
-            'api_version': list(version),
-            'course': data,
-        },
     ))
-
