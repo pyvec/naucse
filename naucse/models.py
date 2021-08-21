@@ -126,51 +126,88 @@ def _get_schema_url(instance, *, is_input):
     )
 
 
-def _sanitize_page_content(parent, content):
-    """Sanitize HTML for a particular page. Also rewrites URLs."""
-    parent_page = getattr(parent, 'page', parent)
-
-    def page_url(*, lesson, page='index', **kw):
-        return parent_page.course.get_lesson_url(lesson, page=page)
-
-    def solution_url(*, solution, **kw):
-        return parent_page.solutions[int(solution)].get_url(**kw)
-
-    def static_url(*, filename, **kw):
-        return parent_page.lesson.static_files[filename].get_url(**kw)
-
-    return sanitize.sanitize_html(
-        content,
-        naucse_urls={
-            'page': page_url,
-            'solution': solution_url,
-            'static': static_url,
-        }
-    )
-
-
 class HTMLFragmentConverter(BaseConverter):
     """Converter for a HTML fragment."""
     load_arg_names = {'parent'}
 
-    def __init__(self, *, sanitizer=None):
-        self.sanitizer = sanitizer
-
     def load(self, value, context, *, parent):
-        if isinstance(value, dict):
-            path_or_file = parent.course.renderer.get_path_or_file(value['path'])
+        return sanitize.sanitize_html(value)
+
+    def dump(self, value, context):
+        return str(value)
+
+    @classmethod
+    def get_schema(cls, context):
+        return {
+            'type': 'string',
+            'format': 'html-fragment',
+        }
+
+class CourseHTMLFragment:
+    def __init__(self, page, value):
+        self.page = page
+        if isinstance(value, str):
+            self._content = self.convert(value)
+            self.path = None
+        else:
+            self._content = None
+            self.path = value['path']
+
+    def dump(self):
+        if self.path:
+            return {'path': self.path}
+        else:
+            return self.content
+
+    @property
+    def content(self):
+        if self._content is None:
+            renderer = self.page.course.renderer
+            path_or_file = renderer.get_path_or_file(self.path)
             if read := getattr(path_or_file, 'read', None):
                 value = path_or_file.read()
                 if isinstance(value, bytes):
                     value = value.decode()
             else:
                 value = Path(path_or_file).read_text(encoding='utf-8')
-        if self.sanitizer is None:
-            return sanitize.sanitize_html(value)
-        return self.sanitizer(parent, value)
+            self._content = self.convert(value)
+        return self._content
+
+    def __str__(self):
+        return self.content
+
+    def __html__(self):
+        return self.content
+
+    def convert(self, content):
+        """Sanitize HTML and rewrites URLs for given content."""
+        def page_url(*, lesson, page='index', **kw):
+            return self.page.course.get_lesson_url(lesson, page=page)
+
+        def solution_url(*, solution, **kw):
+            return self.page.solutions[int(solution)].get_url(**kw)
+
+        def static_url(*, filename, **kw):
+            return self.page.lesson.static_files[filename].get_url(**kw)
+
+        return sanitize.sanitize_html(
+            content,
+            naucse_urls={
+                'page': page_url,
+                'solution': solution_url,
+                'static': static_url,
+            }
+        )
+
+
+class CourseHTMLFragmentConverter(BaseConverter):
+    load_arg_names = {'parent'}
+
+    def load(self, value, context, *, parent):
+        return CourseHTMLFragment(parent, value)
 
     def dump(self, value, context):
-        return str(value)
+        return value.content
 
     @classmethod
     def get_schema(cls, context):
@@ -205,7 +242,7 @@ class Solution(Model):
     parent_attrs = 'page', 'lesson', 'course'
 
     content = Field(
-        HTMLFragmentConverter(sanitizer=_sanitize_page_content),
+        CourseHTMLFragmentConverter(),
         output=False,
         doc="The right solution, as HTML")
 
@@ -353,7 +390,7 @@ class Page(Model):
         doc='Additional modules as a dict with `slug` key and version values')
 
     content = Field(
-        HTMLFragmentConverter(sanitizer=_sanitize_page_content),
+        CourseHTMLFragmentConverter(),
         output=False,
         doc='Content, as HTML')
 
