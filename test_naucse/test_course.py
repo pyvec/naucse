@@ -65,7 +65,7 @@ def test_freeze_empty_course(empty_course):
 def test_get_lesson_url_freeze_error(empty_course):
     """Requested lessons are loaded on freeze(), failing if not available"""
     empty_course.get_lesson_url('any/lesson')
-    empty_course.renderer = DummyRenderer()
+    empty_course.renderer = DummyRenderer(slug='dummy')
     with pytest.raises(DummyLessonNotFound):
         empty_course.freeze()
 
@@ -74,6 +74,7 @@ def test_empty_course_from_renderer(model, assert_model_dump):
     """Valid trvial json that could come from a fork is loaded correctly"""
     source = 'courses/minimal/info.yml'
     renderer = DummyRenderer(
+        slug='courses/minimal',
         course={
             'api_version': [0, 0],
             'course': {
@@ -85,7 +86,6 @@ def test_empty_course_from_renderer(model, assert_model_dump):
     )
     course = models.Course.from_renderer(
         parent=model,
-        slug='courses/minimal',
         renderer=renderer,
     )
     check_empty_course_attrs(course, source_file=Path(source))
@@ -99,11 +99,12 @@ def load_course_from_fixture(model, filename):
     """
 
     with (fixture_path / filename).open() as f:
-        renderer = DummyRenderer(**yaml.safe_load(f))
-    slug = 'courses/complex'
+        renderer = DummyRenderer(
+            slug='courses/complex',
+            **yaml.safe_load(f),
+        )
     course = models.Course.from_renderer(
         parent=model,
-        slug=slug,
         renderer=renderer,
     )
     model.add_course(course)

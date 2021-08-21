@@ -44,7 +44,8 @@ class DummyRenderer:
     As of now, get_lessons only allows a single lesson slug.
     """
 
-    def __init__(self, course=None, lessons=None):
+    def __init__(self, slug, course=None, lessons=None):
+        self.slug = slug
         self.course = course
         self._lessons = lessons or {}
 
@@ -130,12 +131,14 @@ def assert_model_dump(request):
 
 
 def add_test_course(model, slug, data, version=(0, 0)):
-    renderer = DummyRenderer({
-        'api_version': list(version),
-        'course': data,
-    })
+    renderer = DummyRenderer(
+        course={
+            'api_version': list(version),
+            'course': data,
+        },
+        slug=slug,
+    )
     model.add_course(models.Course.from_renderer(
         renderer=renderer,
-        slug=slug,
         parent=model,
     ))

@@ -80,15 +80,13 @@ def test_load_courses():
 
 def test_from_renderer():
     model = models.Root()
-    slug = 'courses/minimal'
     path = fixture_path / 'minimal-courses'
     renderer = LocalRenderer(
         path=path,
         repo_info=get_local_repo_info(path),
-        slug=slug,
+        slug='courses/minimal',
     )
     model.add_course(models.Course.from_renderer(
-        slug=slug,
         parent=model,
         renderer=renderer,
     ))
@@ -102,15 +100,13 @@ def test_from_renderer():
 def test_dump_local_course(model, assert_model_dump):
     version=(0, 0)
     path = fixture_path / 'minimal-courses'
-    slug = 'courses/minimal'
     renderer=LocalRenderer(
         repo_info=get_local_repo_info(path),
         path=path,
-        slug=slug,
+        slug='courses/minimal',
     )
     model.add_course(models.Course.from_renderer(
         parent=model,
-        slug=slug,
         renderer=renderer,
     ))
 

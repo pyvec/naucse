@@ -78,16 +78,14 @@ def arca_model(tmp_path, content_repo):
 
 def test_valid_fork(arca_model, content_repo, assert_model_dump):
     """Valid data can be loaded from a Git repository"""
-    slug = 'courses/normal-course'
     renderer = arca_renderer.Renderer(
         arca=arca_model.arca,
-        slug=slug,
+        slug='courses/normal-course',
         repo=content_repo.as_uri(),
         branch='master',
         trusted_repo_patterns=['*'],
     )
     course = models.Course.from_renderer(
-        slug=slug,
         parent=arca_model,
         renderer=renderer,
     )
@@ -105,10 +103,9 @@ def test_yaml_error(arca_model, content_repo, git_command):
 
     run([git_command, 'commit', '-a', '-m', 'Break YAML'], cwd=content_repo)
 
-    slug = 'courses/normal-course'
     renderer = arca_renderer.Renderer(
         arca=arca_model.arca,
-        slug=slug,
+        slug='courses/normal-course',
         repo=content_repo.as_uri(),
         branch='master',
         trusted_repo_patterns=['*'],
@@ -117,7 +114,6 @@ def test_yaml_error(arca_model, content_repo, git_command):
     with pytest.raises(RemoteRepoError):
         try:
             course = models.Course.from_renderer(
-                slug=slug,
                 parent=arca_model,
                 renderer=renderer,
             )
@@ -158,16 +154,14 @@ def test_lesson_error(arca_model, content_repo, git_command):
     run([git_command, 'add', '.'], cwd=content_repo)
     run([git_command, 'commit', '-a', '-mAdd bad course'], cwd=content_repo)
 
-    slug = 'courses/bad-course'
     renderer = arca_renderer.Renderer(
         arca=arca_model.arca,
-        slug=slug,
+        slug='courses/bad-course',
         repo=content_repo.as_uri(),
         branch='master',
         trusted_repo_patterns=['*'],
     )
     course = models.Course.from_renderer(
-        slug=slug,
         parent=arca_model,
         renderer=renderer,
     )
@@ -195,16 +189,14 @@ def test_removed_data(arca_model, content_repo, git_command):
 
     with pytest.raises(RemoteRepoError):
         link_info = {'repo': content_repo.as_uri(), 'branch': 'master'}
-        slug = 'courses/normal-course'
         renderer = arca_renderer.Renderer(
             arca=arca_model.arca,
-            slug=slug,
+            slug='courses/normal-course',
             **link_info,
             trusted_repo_patterns=arca_model.trusted_repo_patterns,
         )
         try:
             course = models.Course.from_renderer(
-                slug=slug,
                 parent=arca_model,
                 renderer=renderer,
             )

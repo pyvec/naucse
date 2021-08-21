@@ -673,9 +673,10 @@ class Course(Model):
 
     @classmethod
     def from_renderer(
-        cls, slug, *, parent, renderer, canonical=False,
+        cls, *, parent, renderer, canonical=False,
     ):
         data = renderer.get_course()
+        slug = renderer.slug
         is_meta = (slug == 'courses/meta')
         result = load(
             cls, data, slug=slug, parent=parent, renderer=renderer,
@@ -953,7 +954,7 @@ class Root(Model):
                         trusted_repo_patterns=self.trusted_repo_patterns,
                     )
                     course = Course.from_renderer(
-                        slug, parent=self, renderer=renderer,
+                        parent=self, renderer=renderer,
                     )
                 except UntrustedRepo as e:
                     logger.debug(f'Untrusted repo: {e.url}')
@@ -966,7 +967,7 @@ class Root(Model):
                     repo_info=self.repo_info,
                 )
                 course = Course.from_renderer(
-                    slug, parent=self,
+                    parent=self,
                     canonical=canonical_if_local,
                     renderer=renderer,
                 )
@@ -994,7 +995,6 @@ class Root(Model):
                 repo_info=self.repo_info,
             )
             self.add_course(Course.from_renderer(
-                'lessons',
                 canonical=True,
                 parent=self,
                 renderer=renderer,
