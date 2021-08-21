@@ -220,7 +220,10 @@ def session(course_slug, session_slug, page_slug):
 def _get_canonicality_info(lesson):
     """Get canonical URL -- i.e., a lesson from 'lessons' with the same slug"""
     # XXX: This could be made much more fancy
-    lessons_course = g.model.get_course('lessons')
+    try:
+        lessons_course = g.model.get_course('lessons')
+    except KeyError:
+        return False, None
     is_canonical_lesson = (lessons_course == lesson.course)
     if is_canonical_lesson:
         canonical_url = None

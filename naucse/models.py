@@ -19,7 +19,7 @@ from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 from naucse.exceptions import UntrustedRepo
-from naucse import arca_renderer, local_renderer
+from naucse import arca_renderer, local_renderer, compiled_renderer
 
 
 API_VERSION = 0, 3
@@ -157,6 +157,14 @@ class HTMLFragmentConverter(BaseConverter):
         self.sanitizer = sanitizer
 
     def load(self, value, context, *, parent):
+        if isinstance(value, dict):
+            path_or_file = parent.course.renderer.get_path_or_file(value['path'])
+            if read := getattr(path_or_file, 'read', None):
+                value = path_or_file.read()
+                if isinstance(value, bytes):
+                    value = value.decode()
+            else:
+                value = Path(path_or_file).read_text(encoding='utf-8')
         if self.sanitizer is None:
             return sanitize.sanitize_html(value)
         return self.sanitizer(parent, value)
@@ -167,8 +175,25 @@ class HTMLFragmentConverter(BaseConverter):
     @classmethod
     def get_schema(cls, context):
         return {
-            'type': 'string',
-            'format': 'html-fragment',
+            "anyOf": [
+                {
+                    'type': 'string',
+                    'format': 'html-fragment',
+                },
+                {
+                    'type': 'object',
+                    'description':
+                        'HTML fragment loaded from a file external '
+                        + 'to the JSON data',
+                    'properties': {
+                        'path': {
+                            'type': 'string',
+                            'pattern': '^[-_./a-z0-9]+$'
+                        }
+                    },
+                    'required': ['path'],
+                },
+            ]
         }
 
 
@@ -940,6 +965,7 @@ class Root(Model):
         self_study_course_path = path / 'courses'
         run_path = path / 'runs'
         lesson_path = path / 'lessons'
+        compiled_path = path / 'courses.yml'
 
         def _load_local_course(course_path, slug, canonical_if_local=False):
             link_path = course_path / 'link.yml'
@@ -987,6 +1013,20 @@ class Root(Model):
                     for course_path in year_path.iterdir():
                         slug = f'{year_path.name}/{course_path.name}'
                         _load_local_course(course_path, slug)
+
+        fetcher = compiled_renderer.Fetcher()
+        if compiled_path.exists():
+            with compiled_path.open() as f:
+                courses_info = yaml.safe_load(f)
+            for slug, course_info in courses_info.items():
+                renderer = compiled_renderer.CompiledRenderer(
+                    slug, course_info,
+                    fetcher=fetcher,
+                )
+                self.add_course(Course.from_renderer(
+                    renderer=renderer,
+                    parent=self,
+                ))
 
         if lesson_path.exists():
             renderer = local_renderer.LocalRenderer(
