@@ -52,7 +52,7 @@ def content_repo(tmp_path, git_command):
     """
     repo_path = tmp_path / 'repo'
     shutil.copytree(fixture_path / 'test_content', repo_path)
-    run([git_command, 'init'], cwd=repo_path)
+    run([git_command, 'init', '-b', 'master'], cwd=repo_path)
     run([git_command, 'config', 'user.name', 'Test User'], cwd=repo_path)
     run([git_command, 'config', 'user.email', 'nobody@test'], cwd=repo_path)
     run([git_command, 'add', '.'], cwd=repo_path)
