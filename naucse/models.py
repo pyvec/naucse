@@ -22,7 +22,7 @@ from naucse.exceptions import UntrustedRepo
 from naucse import arca_renderer, local_renderer, compiled_renderer
 
 
-API_VERSION = 0, 3
+API_VERSION = 0, 4
 
 
 class NoURL(LookupError):
@@ -620,6 +620,31 @@ class _LessonsDict(collections.abc.Mapping):
         return len(self.course._lessons)
 
 
+class RepoInfoConverter(BaseConverter):
+    """Converter of any JSON-encodable dict"""
+    def load(self, data, context):
+        return get_repo_info(data['url'], data['branch'])
+
+    def dump(self, value, context):
+        return value.as_dict()
+
+    @classmethod
+    def get_schema(cls, context):
+        return {
+            'type': 'object',
+            'fields': {
+                'url': {
+                    'type': 'string',
+                    'format': 'uri',
+                },
+                'branch': {
+                    'type': 'string',
+                },
+            },
+            'required': ['url', 'branch'],
+        }
+
+
 class Course(Model):
     """Collection of sessions
     """
@@ -631,7 +656,6 @@ class Course(Model):
         super().__init__(parent=parent)
         self.slug = slug
         self.renderer = renderer
-        self.repo_info = renderer.get_repo_info()
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
@@ -681,6 +705,19 @@ class Course(Model):
                 + "Mandatory if such times appear in the course."
         )
     })
+
+    _edit_info = VersionField({
+        (0, 4): Field(
+            RepoInfoConverter(),
+            doc="""Information about a repository where the content can be edited""",
+            data_key='edit_info',
+            optional=True,
+        )
+    })
+
+    @property
+    def repo_info(self):
+        return self._edit_info or self.renderer.get_repo_info()
 
     @timezone.after_load()
     def set_timezone(self, context):
@@ -937,7 +974,7 @@ class Root(Model):
         self.licenses = {}
         self.self_study_courses = {}
 
-        self.set_repo_info(repo_info or get_local_repo_info('.'))
+        self._repo_info_override = repo_info
 
         # For pagination of runs
         # XXX: This shouldn't be necessary

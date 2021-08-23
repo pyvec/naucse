@@ -49,8 +49,7 @@ class CompiledRenderer:
 
     @functools.lru_cache
     def get_repo_info(self):
-        info = json.loads(self.get_path('repo_info.json'))
-        return get_repo_info(info['url'], info['branch'])
+        raise ValueError('edit info should be included in the course')
 
     def get_path_or_file(self, path):
         content = self.get_path(path, encoding=None)
