@@ -1,0 +1,80 @@
+$schema: http://dummy.test/schema/Course
+api_version:
+- 0
+- 1
+course:
+    default_time:
+        end: '20:00'
+        start: '18:00'
+    end_date: '2019-04-01'
+    etag: testing-etag
+    lessons:
+        test/lesson1:
+            pages:
+                index:
+                    attribution:
+                    - me
+                    license: cc0
+                    modules: {}
+                    solutions: []
+                    title: A lesson
+                    url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=index
+                subtitled:
+                    attribution:
+                    - me
+                    license: cc0
+                    modules: {}
+                    solutions: []
+                    title: "A lesson \u2013 Subtitled"
+                    url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=subtitled
+                subtitled-and-titled:
+                    attribution:
+                    - me
+                    license: cc0
+                    modules: {}
+                    solutions: []
+                    title: A page with custom title
+                    url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=subtitled-and-titled
+            static_files: {}
+            url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson1
+    long_description: ''
+    sessions:
+    -   date: '2019-01-01'
+        materials:
+        -   lesson_slug: test/lesson1
+            type: lesson
+            url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson1
+        pages:
+            back:
+                content: ''
+                url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=back&session_slug=first
+            front:
+                content: ''
+                url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=front&session_slug=first
+        slug: first
+        time:
+            end: '2019-01-01 21:00:00'
+            start: '2019-01-01 19:00:00'
+        title: First lesson
+        url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=first
+    -   date: '2019-04-01'
+        materials: []
+        pages:
+            back:
+                content: ''
+                url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=back&session_slug=second
+            front:
+                content: ''
+                url: http://dummy.test/model/web/SessionPage/?course_slug=courses/complex&page_slug=front&session_slug=second
+        slug: second
+        time:
+            end: '2019-04-01 20:00:00'
+            start: '2019-04-01 18:00:00'
+        title: Second lesson
+        url: http://dummy.test/model/web/Session/?course_slug=courses/complex&session_slug=second
+    source_file: courses/complex/info.yml
+    start_date: '2019-01-01'
+    subtitle: Suitable for testing only.
+    title: A course loaded from API version 0.3
+    url: http://dummy.test/model/web/Course/?course_slug=courses/complex
+    vars: {}

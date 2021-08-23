@@ -14,6 +14,7 @@ from naucse import compiled_renderer
 
 from test_naucse.conftest import add_test_course, fixture_path
 from test_naucse.conftest import DummyRenderer, DummyLessonNotFound
+from test_naucse.conftest import api_versions_since
 
 
 @pytest.fixture
@@ -125,9 +126,10 @@ def test_complex_course(model, assert_model_dump):
     assert course.sessions['full'].description == 'A <em>full session!</em>'
 
 
-@pytest.mark.parametrize('version', ('0.1', '0.2', '0.3'))
+@pytest.mark.parametrize('version', api_versions_since((0, 1)))
 def test_api_version(model, assert_model_dump, version):
     """Valid json with API changes from the given version is loaded correctly"""
+    version = '{}.{}'.format(*version)
     name = f'course-v{version}'
     course = load_course_from_fixture(model, f'course-data/{name}.yml')
 

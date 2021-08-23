@@ -25,6 +25,9 @@ course:
                 external_url: 'https://somewhere.test/'
               - type: lesson
                 lesson_slug: test/lesson1
+        edit_info:
+            url: https://github.com/example/example
+            branch: main
 
 lessons:
     test/lesson1:

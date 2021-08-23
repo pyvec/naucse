@@ -1,0 +1,13 @@
+$schema: http://dummy.test/schema/Course
+api_version:
+- 0
+- 4
+course:
+    lessons: {}
+    long_description: ''
+    sessions: []
+    source_file: courses/minimal/info.yml
+    timezone: Europe/Prague
+    title: A minimal course
+    url: http://dummy.test/model/web/Course/?course_slug=courses/minimal
+    vars: {}

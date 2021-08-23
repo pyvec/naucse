@@ -9,7 +9,10 @@ from naucse.edit_info import get_local_repo_info
 from naucse.local_renderer import LocalRenderer
 
 
-API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3))
+API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3), (0, 4))
+
+def api_versions_since(minimum):
+    return tuple(version for version in API_VERSIONS if version >= minimum)
 
 
 fixture_path = Path(__file__).parent / 'fixtures'
