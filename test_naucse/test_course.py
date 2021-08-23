@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import shutil
 
 import pytest
 import yaml
@@ -8,6 +10,7 @@ from naucse import models
 from naucse.edit_info import get_local_repo_info
 from naucse.converters import DuplicateKeyError
 from naucse.local_renderer import LocalRenderer
+from naucse import compiled_renderer
 
 from test_naucse.conftest import add_test_course, fixture_path
 from test_naucse.conftest import DummyRenderer, DummyLessonNotFound
@@ -174,3 +177,24 @@ def test_invalid_duplicate_session(model):
     """Json with duplicate sessions that could come from a fork is not loaded"""
     with pytest.raises(DuplicateKeyError):
         load_course_from_fixture(model, 'course-data/invalid-duplicate-session.yml')
+
+
+def test_load_compiled_course(model, tmp_path):
+    """"""
+    repo_path = tmp_path / 'repo'
+    shutil.copytree(fixture_path / 'compiled-course', repo_path)
+    subprocess.run(['git', 'init', '-b', 'main'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)
+
+    fetcher = compiled_renderer.Fetcher(repo_path=tmp_path / 'fetch_repo')
+    renderer = compiled_renderer.CompiledRenderer(
+        slug='test',
+        info={'url': str(repo_path), 'branch': 'main'},
+        fetcher=fetcher,
+    )
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    assert str(course.lessons['lesson1'].pages['index'].content) == 'Content 1'
+    assert str(course.lessons['lesson2'].pages['index'].content) == 'Content 2\n'
