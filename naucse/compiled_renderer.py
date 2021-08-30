@@ -6,8 +6,9 @@ import re
 import datetime
 import threading
 from io import BytesIO
-
 import json
+
+from gitpathlib import GitPath
 
 from .edit_info import get_repo_info
 
@@ -24,20 +25,17 @@ class CompiledRenderer:
         self.path = PurePosixPath(info.get('path', '.'))
         self.ref = self.fetcher.get_ref(self.url, self.branch)
         fetcher.register_branch(self.url, self.branch)
+        self.gitpath = None
 
-    def get_path(self, path, encoding='utf-8'):
-        self.fetcher.fetch(self.url, self.branch)
-        path = self.path / path
-        cmd = self.fetcher.run_git(
-            'show', f'{self.ref}:{path}',
-            encoding=encoding,
-            stdout=subprocess.PIPE
-        )
-        return cmd.stdout
+    def get_path(self, path):
+        if self.gitpath is None:
+            self.gitpath = self.fetcher.fetch(self.url, self.branch) / self.path
+        return self.gitpath / path
 
     @functools.lru_cache
     def get_course(self):
-        return json.loads(self.get_path('course.json'))
+        with self.get_path('course.json').open() as f:
+            return json.load(f)
 
     def get_lessons(self, slugs, *, vars=None):
         info = self.get_course()
@@ -52,11 +50,7 @@ class CompiledRenderer:
         raise ValueError('edit info should be included in the course')
 
     def get_path_or_file(self, path):
-        try:
-            content = self.get_path(path, encoding=None)
-        except subprocess.CalledProcessError as e:
-            raise FileNotFoundError(path) from e
-        return BytesIO(content)
+        return self.get_path(path).open('rb')
 
 
 def run(*args, check=True, encoding='utf-8', **kwargs):
@@ -122,6 +116,10 @@ class Fetcher:
         return f'refs/remotes/{git_identifer(url)}/{branch}'
 
     def fetch(self, url, branch, depth=5):
+        """Fetch the given branch from the given URL
+
+        Returns a GitPath to the newly fetched branch.
+        """
         with main_lock:
             self.register_branch(url, branch)
             to_fetch = self.registered_branches.pop(url)
@@ -129,7 +127,7 @@ class Fetcher:
             to_fetch = self.filter_branches_to_fetch(url, to_fetch, now=now)
             if branch not in to_fetch:
                 self.fetched_branches.setdefault(url, set()).add(branch)
-                return
+                return GitPath(self.repo_path, self.get_ref(url, branch))
             branches = sorted(to_fetch)
             ident = git_identifer(url)
             self.run_git(
@@ -142,7 +140,7 @@ class Fetcher:
             )
             self.fetched_branches.setdefault(url, set()).update(to_fetch)
             self.update_fetched_branches(url, to_fetch, now=now)
-        return self.get_ref(url, branch)
+        return GitPath(self.repo_path, self.get_ref(url, branch))
 
     def get_last_fetch_config_variable(self, url, branch):
         return f'naucse.last_fetch.{git_identifer(url)}.{branch}'
