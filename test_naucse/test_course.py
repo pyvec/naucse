@@ -181,10 +181,9 @@ def test_invalid_duplicate_session(model):
         load_course_from_fixture(model, 'course-data/invalid-duplicate-session.yml')
 
 
-def test_load_compiled_course(model, tmp_path):
-    """"""
+def setup_compiled_renderer(model, tmp_path, fixture_name):
     repo_path = tmp_path / 'repo'
-    shutil.copytree(fixture_path / 'compiled-course', repo_path)
+    shutil.copytree(fixture_path / fixture_name, repo_path)
     subprocess.run(['git', 'init', '-b', 'main'], cwd=repo_path, check=True)
     subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
     subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
@@ -197,6 +196,45 @@ def test_load_compiled_course(model, tmp_path):
         info={'url': str(repo_path), 'branch': 'main'},
         fetcher=fetcher,
     )
+    return renderer
+
+
+def test_load_compiled_course(model, tmp_path):
+    """Test that a compiled course can be loaded"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-course')
     course = models.Course.from_renderer(parent=model, renderer=renderer)
     assert str(course.lessons['lesson1'].pages['index'].content) == 'Content 1'
     assert str(course.lessons['lesson2'].pages['index'].content) == 'Content 2\n'
+
+
+def test_load_compiled_course_missing_page(model, tmp_path):
+    """Test that accessing missing lesson contents fails"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-page')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        print(course.lessons['lesson1'].pages['index'].content)
+
+
+def test_load_compiled_course_missing_page_freeze(model, tmp_path):
+    """Test that freeze() fails fast when lesson contents are missing"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-page')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        course.freeze()
+
+
+def test_load_compiled_course_missing_static(model, tmp_path):
+    """Test that accessing a missing static file fails"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-static')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        static_file = course.lessons['lesson1'].static_files['helpful-diagram.png']
+        print(static_file.get_path_or_file())
+
+
+def test_load_compiled_course_missing_static_freeze(model, tmp_path):
+    """Test that freeze() fails fast when a static file is missing"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-static')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        course.freeze()

@@ -161,17 +161,7 @@ class CourseHTMLFragment:
 
     @property
     def content(self):
-        if self._content is None:
-            renderer = self.page.course.renderer
-            path_or_file = renderer.get_path_or_file(self.path)
-            if read := getattr(path_or_file, 'read', None):
-                value = path_or_file.read()
-                if isinstance(value, bytes):
-                    value = value.decode()
-            else:
-                value = Path(path_or_file).read_text(encoding='utf-8')
-            self._content = self.convert(value)
-        return self._content
+        return self.freeze()
 
     def __str__(self):
         return self.content
@@ -198,6 +188,20 @@ class CourseHTMLFragment:
                 'static': static_url,
             }
         )
+
+    def freeze(self):
+        if self._content is not None:
+            return self._content
+        renderer = self.page.course.renderer
+        path_or_file = renderer.get_path_or_file(self.path)
+        if read := getattr(path_or_file, 'read', None):
+            value = path_or_file.read()
+            if isinstance(value, bytes):
+                value = value.decode()
+        else:
+            value = Path(path_or_file).read_text(encoding='utf-8')
+        self._content = self.convert(value)
+        return self._content
 
 
 class CourseHTMLFragmentConverter(BaseConverter):
@@ -394,6 +398,10 @@ class Page(Model):
         output=False,
         doc='Content, as HTML')
 
+    def freeze(self):
+        if self.content:
+            self.content.freeze()
+
 
 class Lesson(Model):
     """A lesson – collection of Pages on a single topic
@@ -428,6 +436,14 @@ class Lesson(Model):
             for material in session.materials:
                 if self == material.lesson:
                     return material
+
+    def freeze(self):
+        for page in self.pages.values():
+            page.freeze()
+        for static_file in self.static_files.values():
+            # This should ensure the file exists.
+            # (Maybe there should be more efficient API for that.)
+            static_file.get_path_or_file()
 
 
 class Material(Model):
@@ -870,6 +886,8 @@ class Course(Model):
             return
         self.load_all_lessons()
         self._frozen = True
+        for lesson in self.lessons.values():
+            lesson.freeze()
 
 
 class AbbreviatedDictConverter(DictConverter):

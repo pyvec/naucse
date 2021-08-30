@@ -52,7 +52,10 @@ class CompiledRenderer:
         raise ValueError('edit info should be included in the course')
 
     def get_path_or_file(self, path):
-        content = self.get_path(path, encoding=None)
+        try:
+            content = self.get_path(path, encoding=None)
+        except subprocess.CalledProcessError as e:
+            raise FileNotFoundError(path) from e
         return BytesIO(content)
 
 
