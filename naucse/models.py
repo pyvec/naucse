@@ -675,6 +675,7 @@ class Course(Model):
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
+        self._freezing = False
         self.canonical = canonical
 
         self._lessons = {}
@@ -828,9 +829,10 @@ class Course(Model):
         return result
 
     def get_lesson_url(self, slug, *, page='index', **kw):
-        if self._frozen and slug not in self._lessons:
-            return KeyError(slug)
-        self._requested_lessons.add(slug)
+        if slug not in self._lessons:
+            if self._frozen:
+                raise KeyError(slug)
+            self._requested_lessons.add(slug)
         return self.root._url_for(
             Page, pks={'page_slug': page, 'lesson_slug': slug,
                        **self.get_pks()}
@@ -855,10 +857,15 @@ class Course(Model):
                 raise ValueError(f'{slug} missing from rendered lessons')
             self._lessons[slug] = lesson
             self._requested_lessons.discard(slug)
+            if self._freezing:
+                lesson.freeze()
 
     def load_all_lessons(self):
         if self._frozen:
             return
+        if self._freezing:
+            for lesson in self.lessons.values():
+                lesson.freeze()
         self._requested_lessons.difference_update(self._lessons)
         link_depth = 50
         while self._requested_lessons:
@@ -880,12 +887,11 @@ class Course(Model):
         )
 
     def freeze(self):
-        if self._frozen:
+        if self._frozen or self._freezing:
             return
+        self._freezing = True
         self.load_all_lessons()
         self._frozen = True
-        for lesson in self.lessons.values():
-            lesson.freeze()
 
 
 class AbbreviatedDictConverter(DictConverter):
