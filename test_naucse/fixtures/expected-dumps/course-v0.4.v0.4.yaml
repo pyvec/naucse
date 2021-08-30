@@ -48,7 +48,7 @@ course:
         materials:
         -   lesson_slug: test/lesson1
             type: lesson
-            url: http://dummy.test/model/web/Lesson/?course_slug=courses/complex&lesson_slug=test/lesson1
+            url: http://dummy.test/model/web/Page/?course_slug=courses/complex&lesson_slug=test/lesson1&page_slug=index
         pages:
             back:
                 content: ''

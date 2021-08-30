@@ -828,9 +828,7 @@ class Course(Model):
         return result
 
     def get_lesson_url(self, slug, *, page='index', **kw):
-        if slug in self._lessons:
-            return self._lessons[slug].get_url(**kw)
-        if self._frozen:
+        if self._frozen and slug not in self._lessons:
             return KeyError(slug)
         self._requested_lessons.add(slug)
         return self.root._url_for(
