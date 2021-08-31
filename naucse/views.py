@@ -106,9 +106,10 @@ def runs(year=None, all=None):
     # List of years to show in the pagination
     # If the current year is not there (no runs that start in the current year
     # yet), add it manually
-    all_years = sorted(g.model.explicit_run_years)
+    all_years = list(g.model.run_years)
     if today.year not in all_years:
         all_years.append(today.year)
+    all_years.sort()
     first_year, last_year = min(all_years), max(all_years)
 
     if year is not None:

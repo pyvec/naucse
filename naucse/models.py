@@ -998,10 +998,6 @@ class Root(Model):
 
         self._repo_info_override = repo_info
 
-        # For pagination of runs
-        # XXX: This shouldn't be necessary
-        self.explicit_run_years = set()
-
         # Repos we trust for code execution
         if trusted_repo_patterns is None:
             trusted = os.environ.get(
@@ -1105,7 +1101,6 @@ class Root(Model):
         if run_path.exists():
             for year_path in sorted(run_path.iterdir()):
                 if year_path.is_dir():
-                    self.explicit_run_years.add(int(year_path.name))
                     for course_path in year_path.iterdir():
                         slug = f'{year_path.name}/{course_path.name}'
                         _load_local_course(course_path, slug)
