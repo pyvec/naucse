@@ -4,18 +4,30 @@ from werkzeug.security import safe_join
 
 import naucse_render
 
+MISSING = object()
+
 class LocalRenderer:
-    """Renders a local course using the `naucse_render` module."""
-    def __init__(self, *, path, slug, repo_info):
+    """Renders a local course using the `naucse_render` module.
+
+    path: Filesystem path from which to load the course
+    slug: Slug under which the course will be published
+    repo_info: Repository information (for "edit online" links)
+    api_slug: Slug under which the course will be loaded
+        (if not given, `slug` will be used)
+    """
+    def __init__(self, *, path, slug, repo_info, api_slug=MISSING):
         self.path = Path(path).resolve()
         self.version = 1
         self.slug = slug
+        if api_slug is MISSING:
+            api_slug = slug
+        self.api_slug = api_slug
         self.repo_info = repo_info
 
     def get_course(self):
         """Return information about a course"""
         return naucse_render.get_course(
-            self.slug,
+            self.api_slug,
             version=self.version,
             path=self.path,
         )

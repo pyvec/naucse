@@ -1058,6 +1058,7 @@ class Root(Model):
         run_path = path / 'runs'
         lesson_path = path / 'lessons'
         compiled_path = path / 'courses.yml'
+        local_course_path = path / 'course.yml'
 
         def _load_local_course(course_path, slug, canonical_if_local=False):
             link_path = course_path / 'link.yml'
@@ -1090,6 +1091,16 @@ class Root(Model):
                     renderer=renderer,
                 )
                 self.add_course(course)
+
+        if (local_course_path).is_file():
+            renderer = local_renderer.LocalRenderer(
+                path=path,
+                slug='courses/local',
+                repo_info=self.repo_info,
+                api_slug=None
+            )
+            course = Course.from_renderer(parent=self, renderer=renderer)
+            self.add_course(course)
 
         if self_study_course_path.exists():
             for course_path in self_study_course_path.iterdir():
