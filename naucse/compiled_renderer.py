@@ -47,7 +47,11 @@ class CompiledRenderer:
 
     @functools.lru_cache
     def get_repo_info(self):
-        raise ValueError('edit info should be included in the course')
+        try:
+            edit_info = self.get_course()['course']['edit_info']
+        except KeyError:
+            raise ValueError('edit info should be included in the course')
+        return get_repo_info(edit_info['url'], edit_info['branch'])
 
     def get_path_or_file(self, path):
         return self.get_path(path).open('rb')
