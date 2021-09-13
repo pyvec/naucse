@@ -195,7 +195,8 @@ class CourseHTMLFragment:
         renderer = self.page.course.renderer
         path_or_file = renderer.get_path_or_file(self.path)
         if read := getattr(path_or_file, 'read', None):
-            value = path_or_file.read()
+            with path_or_file:
+                value = path_or_file.read()
             if isinstance(value, bytes):
                 value = value.decode()
         else:
@@ -443,6 +444,7 @@ class Lesson(Model):
         for static_file in self.static_files.values():
             # This should ensure the file exists.
             # (Maybe there should be more efficient API for that.)
+            # XXX this can return an open file that isn't closed, but see https://github.com/pyvec/naucse/issues/53
             static_file.get_path_or_file()
 
 
