@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import shutil
 
 import pytest
 import yaml
@@ -8,9 +10,11 @@ from naucse import models
 from naucse.edit_info import get_local_repo_info
 from naucse.converters import DuplicateKeyError
 from naucse.local_renderer import LocalRenderer
+from naucse import compiled_renderer
 
 from test_naucse.conftest import add_test_course, fixture_path
 from test_naucse.conftest import DummyRenderer, DummyLessonNotFound
+from test_naucse.conftest import api_versions_since
 
 
 @pytest.fixture
@@ -65,7 +69,7 @@ def test_freeze_empty_course(empty_course):
 def test_get_lesson_url_freeze_error(empty_course):
     """Requested lessons are loaded on freeze(), failing if not available"""
     empty_course.get_lesson_url('any/lesson')
-    empty_course.renderer = DummyRenderer()
+    empty_course.renderer = DummyRenderer(slug='dummy')
     with pytest.raises(DummyLessonNotFound):
         empty_course.freeze()
 
@@ -74,6 +78,7 @@ def test_empty_course_from_renderer(model, assert_model_dump):
     """Valid trvial json that could come from a fork is loaded correctly"""
     source = 'courses/minimal/info.yml'
     renderer = DummyRenderer(
+        slug='courses/minimal',
         course={
             'api_version': [0, 0],
             'course': {
@@ -85,7 +90,6 @@ def test_empty_course_from_renderer(model, assert_model_dump):
     )
     course = models.Course.from_renderer(
         parent=model,
-        slug='courses/minimal',
         renderer=renderer,
     )
     check_empty_course_attrs(course, source_file=Path(source))
@@ -99,11 +103,12 @@ def load_course_from_fixture(model, filename):
     """
 
     with (fixture_path / filename).open() as f:
-        renderer = DummyRenderer(**yaml.safe_load(f))
-    slug = 'courses/complex'
+        renderer = DummyRenderer(
+            slug='courses/complex',
+            **yaml.safe_load(f),
+        )
     course = models.Course.from_renderer(
         parent=model,
-        slug=slug,
         renderer=renderer,
     )
     model.add_course(course)
@@ -121,9 +126,10 @@ def test_complex_course(model, assert_model_dump):
     assert course.sessions['full'].description == 'A <em>full session!</em>'
 
 
-@pytest.mark.parametrize('version', ('0.1', '0.2', '0.3'))
+@pytest.mark.parametrize('version', api_versions_since((0, 1)))
 def test_api_version(model, assert_model_dump, version):
     """Valid json with API changes from the given version is loaded correctly"""
+    version = '{}.{}'.format(*version)
     name = f'course-v{version}'
     course = load_course_from_fixture(model, f'course-data/{name}.yml')
 
@@ -173,3 +179,62 @@ def test_invalid_duplicate_session(model):
     """Json with duplicate sessions that could come from a fork is not loaded"""
     with pytest.raises(DuplicateKeyError):
         load_course_from_fixture(model, 'course-data/invalid-duplicate-session.yml')
+
+
+def setup_compiled_renderer(model, tmp_path, fixture_name):
+    repo_path = tmp_path / 'repo'
+    shutil.copytree(fixture_path / fixture_name, repo_path)
+    subprocess.run(['git', 'init', '-b', 'main'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)
+
+    fetcher = compiled_renderer.Fetcher(repo_path=tmp_path / 'fetch_repo')
+    renderer = compiled_renderer.CompiledRenderer(
+        slug='test',
+        info={'url': str(repo_path), 'branch': 'main'},
+        fetcher=fetcher,
+    )
+    return renderer
+
+
+def test_load_compiled_course(model, tmp_path):
+    """Test that a compiled course can be loaded"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-course')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    assert str(course.lessons['lesson1'].pages['index'].content) == 'Content 1'
+    assert str(course.lessons['lesson2'].pages['index'].content) == 'Content 2\n'
+
+
+def test_load_compiled_course_missing_page(model, tmp_path):
+    """Test that accessing missing lesson contents fails"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-page')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        print(course.lessons['lesson1'].pages['index'].content)
+
+
+def test_load_compiled_course_missing_page_freeze(model, tmp_path):
+    """Test that freeze() fails fast when lesson contents are missing"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-page')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        course.freeze()
+
+
+def test_load_compiled_course_missing_static(model, tmp_path):
+    """Test that accessing a missing static file fails"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-static')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        static_file = course.lessons['lesson1'].static_files['helpful-diagram.png']
+        print(static_file.get_path_or_file())
+
+
+def test_load_compiled_course_missing_static_freeze(model, tmp_path):
+    """Test that freeze() fails fast when a static file is missing"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-missing-static')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    with pytest.raises(FileNotFoundError):
+        course.freeze()

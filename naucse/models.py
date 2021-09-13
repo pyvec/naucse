@@ -19,10 +19,10 @@ from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 from naucse.exceptions import UntrustedRepo
-from naucse import arca_renderer, local_renderer
+from naucse import arca_renderer, local_renderer, compiled_renderer
 
 
-API_VERSION = 0, 3
+API_VERSION = 0, 4
 
 
 class NoURL(LookupError):
@@ -126,40 +126,12 @@ def _get_schema_url(instance, *, is_input):
     )
 
 
-def _sanitize_page_content(parent, content):
-    """Sanitize HTML for a particular page. Also rewrites URLs."""
-    parent_page = getattr(parent, 'page', parent)
-
-    def page_url(*, lesson, page='index', **kw):
-        return parent_page.course.get_lesson_url(lesson, page=page)
-
-    def solution_url(*, solution, **kw):
-        return parent_page.solutions[int(solution)].get_url(**kw)
-
-    def static_url(*, filename, **kw):
-        return parent_page.lesson.static_files[filename].get_url(**kw)
-
-    return sanitize.sanitize_html(
-        content,
-        naucse_urls={
-            'page': page_url,
-            'solution': solution_url,
-            'static': static_url,
-        }
-    )
-
-
 class HTMLFragmentConverter(BaseConverter):
     """Converter for a HTML fragment."""
     load_arg_names = {'parent'}
 
-    def __init__(self, *, sanitizer=None):
-        self.sanitizer = sanitizer
-
     def load(self, value, context, *, parent):
-        if self.sanitizer is None:
-            return sanitize.sanitize_html(value)
-        return self.sanitizer(parent, value)
+        return sanitize.sanitize_html(value)
 
     def dump(self, value, context):
         return str(value)
@@ -171,6 +143,101 @@ class HTMLFragmentConverter(BaseConverter):
             'format': 'html-fragment',
         }
 
+class CourseHTMLFragment:
+    def __init__(self, page, value):
+        self.page = page
+        if isinstance(value, str):
+            self._content = self.convert(value)
+            self.path = None
+        else:
+            self._content = None
+            self.path = value['path']
+
+    def dump(self):
+        if self.path:
+            return {'path': self.path}
+        else:
+            return self.content
+
+    @property
+    def content(self):
+        return self.freeze()
+
+    def __str__(self):
+        return self.content
+
+    def __html__(self):
+        return self.content
+
+    def convert(self, content):
+        """Sanitize HTML and rewrites URLs for given content."""
+        def page_url(*, lesson, page='index', **kw):
+            return self.page.course.get_lesson_url(lesson, page=page)
+
+        def solution_url(*, solution, **kw):
+            return self.page.solutions[int(solution)].get_url(**kw)
+
+        def static_url(*, filename, **kw):
+            return self.page.lesson.static_files[filename].get_url(**kw)
+
+        return sanitize.sanitize_html(
+            content,
+            naucse_urls={
+                'page': page_url,
+                'solution': solution_url,
+                'static': static_url,
+            }
+        )
+
+    def freeze(self):
+        if self._content is not None:
+            return self._content
+        renderer = self.page.course.renderer
+        path_or_file = renderer.get_path_or_file(self.path)
+        if read := getattr(path_or_file, 'read', None):
+            with path_or_file:
+                value = path_or_file.read()
+            if isinstance(value, bytes):
+                value = value.decode()
+        else:
+            value = Path(path_or_file).read_text(encoding='utf-8')
+        self._content = self.convert(value)
+        return self._content
+
+
+class CourseHTMLFragmentConverter(BaseConverter):
+    load_arg_names = {'parent'}
+
+    def load(self, value, context, *, parent):
+        return CourseHTMLFragment(parent, value)
+
+    def dump(self, value, context):
+        return value.content
+
+    @classmethod
+    def get_schema(cls, context):
+        return {
+            "anyOf": [
+                {
+                    'type': 'string',
+                    'format': 'html-fragment',
+                },
+                {
+                    'type': 'object',
+                    'description':
+                        'HTML fragment loaded from a file external '
+                        + 'to the JSON data',
+                    'properties': {
+                        'path': {
+                            'type': 'string',
+                            'pattern': '^[-_./a-z0-9]+$'
+                        }
+                    },
+                    'required': ['path'],
+                },
+            ]
+        }
+
 
 class Solution(Model):
     """Solution to a problem on a Page
@@ -180,7 +247,7 @@ class Solution(Model):
     parent_attrs = 'page', 'lesson', 'course'
 
     content = Field(
-        HTMLFragmentConverter(sanitizer=_sanitize_page_content),
+        CourseHTMLFragmentConverter(),
         output=False,
         doc="The right solution, as HTML")
 
@@ -328,9 +395,13 @@ class Page(Model):
         doc='Additional modules as a dict with `slug` key and version values')
 
     content = Field(
-        HTMLFragmentConverter(sanitizer=_sanitize_page_content),
+        CourseHTMLFragmentConverter(),
         output=False,
         doc='Content, as HTML')
+
+    def freeze(self):
+        if self.content:
+            self.content.freeze()
 
 
 class Lesson(Model):
@@ -366,6 +437,15 @@ class Lesson(Model):
             for material in session.materials:
                 if self == material.lesson:
                     return material
+
+    def freeze(self):
+        for page in self.pages.values():
+            page.freeze()
+        for static_file in self.static_files.values():
+            # This should ensure the file exists.
+            # (Maybe there should be more efficient API for that.)
+            # XXX this can return an open file that isn't closed, but see https://github.com/pyvec/naucse/issues/53
+            static_file.get_path_or_file()
 
 
 class Material(Model):
@@ -558,6 +638,31 @@ class _LessonsDict(collections.abc.Mapping):
         return len(self.course._lessons)
 
 
+class RepoInfoConverter(BaseConverter):
+    """Converter of any JSON-encodable dict"""
+    def load(self, data, context):
+        return get_repo_info(data['url'], data['branch'])
+
+    def dump(self, value, context):
+        return value.as_dict()
+
+    @classmethod
+    def get_schema(cls, context):
+        return {
+            'type': 'object',
+            'fields': {
+                'url': {
+                    'type': 'string',
+                    'format': 'uri',
+                },
+                'branch': {
+                    'type': 'string',
+                },
+            },
+            'required': ['url', 'branch'],
+        }
+
+
 class Course(Model):
     """Collection of sessions
     """
@@ -569,10 +674,10 @@ class Course(Model):
         super().__init__(parent=parent)
         self.slug = slug
         self.renderer = renderer
-        self.repo_info = renderer.get_repo_info()
         self.is_meta = is_meta
         self.course = self
         self._frozen = False
+        self._freezing = False
         self.canonical = canonical
 
         self._lessons = {}
@@ -619,6 +724,19 @@ class Course(Model):
                 + "Mandatory if such times appear in the course."
         )
     })
+
+    _edit_info = VersionField({
+        (0, 4): Field(
+            RepoInfoConverter(),
+            doc="""Information about a repository where the content can be edited""",
+            data_key='edit_info',
+            optional=True,
+        )
+    })
+
+    @property
+    def repo_info(self):
+        return self._edit_info or self.renderer.get_repo_info()
 
     @timezone.after_load()
     def set_timezone(self, context):
@@ -673,9 +791,10 @@ class Course(Model):
 
     @classmethod
     def from_renderer(
-        cls, slug, *, parent, renderer, canonical=False,
+        cls, *, parent, renderer, canonical=False,
     ):
         data = renderer.get_course()
+        slug = renderer.slug
         is_meta = (slug == 'courses/meta')
         result = load(
             cls, data, slug=slug, parent=parent, renderer=renderer,
@@ -712,11 +831,10 @@ class Course(Model):
         return result
 
     def get_lesson_url(self, slug, *, page='index', **kw):
-        if slug in self._lessons:
-            return self._lessons[slug].get_url(**kw)
-        if self._frozen:
-            return KeyError(slug)
-        self._requested_lessons.add(slug)
+        if slug not in self._lessons:
+            if self._frozen:
+                raise KeyError(slug)
+            self._requested_lessons.add(slug)
         return self.root._url_for(
             Page, pks={'page_slug': page, 'lesson_slug': slug,
                        **self.get_pks()}
@@ -741,10 +859,15 @@ class Course(Model):
                 raise ValueError(f'{slug} missing from rendered lessons')
             self._lessons[slug] = lesson
             self._requested_lessons.discard(slug)
+            if self._freezing:
+                lesson.freeze()
 
     def load_all_lessons(self):
         if self._frozen:
             return
+        if self._freezing:
+            for lesson in self.lessons.values():
+                lesson.freeze()
         self._requested_lessons.difference_update(self._lessons)
         link_depth = 50
         while self._requested_lessons:
@@ -766,8 +889,9 @@ class Course(Model):
         )
 
     def freeze(self):
-        if self._frozen:
+        if self._frozen or self._freezing:
             return
+        self._freezing = True
         self.load_all_lessons()
         self._frozen = True
 
@@ -874,11 +998,7 @@ class Root(Model):
         self.licenses = {}
         self.self_study_courses = {}
 
-        self.set_repo_info(repo_info or get_local_repo_info('.'))
-
-        # For pagination of runs
-        # XXX: This shouldn't be necessary
-        self.explicit_run_years = set()
+        self._repo_info_override = repo_info
 
         # Repos we trust for code execution
         if trusted_repo_patterns is None:
@@ -939,6 +1059,8 @@ class Root(Model):
         self_study_course_path = path / 'courses'
         run_path = path / 'runs'
         lesson_path = path / 'lessons'
+        compiled_path = path / 'courses.yml'
+        local_course_path = path / 'course.yml'
 
         def _load_local_course(course_path, slug, canonical_if_local=False):
             link_path = course_path / 'link.yml'
@@ -953,7 +1075,7 @@ class Root(Model):
                         trusted_repo_patterns=self.trusted_repo_patterns,
                     )
                     course = Course.from_renderer(
-                        slug, parent=self, renderer=renderer,
+                        parent=self, renderer=renderer,
                     )
                 except UntrustedRepo as e:
                     logger.debug(f'Untrusted repo: {e.url}')
@@ -966,11 +1088,21 @@ class Root(Model):
                     repo_info=self.repo_info,
                 )
                 course = Course.from_renderer(
-                    slug, parent=self,
+                    parent=self,
                     canonical=canonical_if_local,
                     renderer=renderer,
                 )
                 self.add_course(course)
+
+        if (local_course_path).is_file():
+            renderer = local_renderer.LocalRenderer(
+                path=path,
+                slug='courses/local',
+                repo_info=self.repo_info,
+                api_slug=None
+            )
+            course = Course.from_renderer(parent=self, renderer=renderer)
+            self.add_course(course)
 
         if self_study_course_path.exists():
             for course_path in self_study_course_path.iterdir():
@@ -982,10 +1114,23 @@ class Root(Model):
         if run_path.exists():
             for year_path in sorted(run_path.iterdir()):
                 if year_path.is_dir():
-                    self.explicit_run_years.add(int(year_path.name))
                     for course_path in year_path.iterdir():
                         slug = f'{year_path.name}/{course_path.name}'
                         _load_local_course(course_path, slug)
+
+        fetcher = compiled_renderer.Fetcher()
+        if compiled_path.exists():
+            with compiled_path.open() as f:
+                courses_info = yaml.safe_load(f)
+            for slug, course_info in courses_info.items():
+                renderer = compiled_renderer.CompiledRenderer(
+                    slug, course_info,
+                    fetcher=fetcher,
+                )
+                self.add_course(Course.from_renderer(
+                    renderer=renderer,
+                    parent=self,
+                ))
 
         if lesson_path.exists():
             renderer = local_renderer.LocalRenderer(
@@ -994,7 +1139,6 @@ class Root(Model):
                 repo_info=self.repo_info,
             )
             self.add_course(Course.from_renderer(
-                'lessons',
                 canonical=True,
                 parent=self,
                 renderer=renderer,

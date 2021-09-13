@@ -9,7 +9,10 @@ from naucse.edit_info import get_local_repo_info
 from naucse.local_renderer import LocalRenderer
 
 
-API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3))
+API_VERSIONS = ((0, 0), (0, 1), (0, 2), (0, 3), (0, 4))
+
+def api_versions_since(minimum):
+    return tuple(version for version in API_VERSIONS if version >= minimum)
 
 
 fixture_path = Path(__file__).parent / 'fixtures'
@@ -44,7 +47,8 @@ class DummyRenderer:
     As of now, get_lessons only allows a single lesson slug.
     """
 
-    def __init__(self, course=None, lessons=None):
+    def __init__(self, slug, course=None, lessons=None):
+        self.slug = slug
         self.course = course
         self._lessons = lessons or {}
 
@@ -130,12 +134,14 @@ def assert_model_dump(request):
 
 
 def add_test_course(model, slug, data, version=(0, 0)):
-    renderer = DummyRenderer({
-        'api_version': list(version),
-        'course': data,
-    })
+    renderer = DummyRenderer(
+        course={
+            'api_version': list(version),
+            'course': data,
+        },
+        slug=slug,
+    )
     model.add_course(models.Course.from_renderer(
         renderer=renderer,
-        slug=slug,
         parent=model,
     ))

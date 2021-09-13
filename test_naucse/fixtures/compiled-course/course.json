@@ -1,0 +1,50 @@
+{
+    "api_version": [0, 4],
+    "course": {
+        "title": "Example course",
+        "sessions": [
+            {
+                "slug": "session1",
+                "title": "First session",
+                "materials": [
+                    {
+                        "lesson_slug": "lesson1",
+                        "type": "lesson"
+                    }
+                ]
+            },
+            {
+                "slug": "session2",
+                "title": "Second session",
+                "materials": [
+                    {
+                        "lesson_slug": "lesson2",
+                        "type": "lesson"
+                    }
+                ]
+            }
+        ],
+        "lessons": {
+            "lesson1": {
+                "title": "First lesson",
+                "pages": {
+                    "index": {
+                        "attribution": [],
+                        "license": "cc0",
+                        "content": "Content 1"
+                    }
+                }
+            },
+            "lesson2": {
+                "title": "First lesson",
+                "pages": {
+                    "index": {
+                        "attribution": [],
+                        "license": "cc0",
+                        "content": {"path": "lesson2.html"}
+                    }
+                }
+            }
+        }
+    }
+}

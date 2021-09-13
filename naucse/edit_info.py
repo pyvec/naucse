@@ -52,6 +52,9 @@ class RepoInfo:
     def get_edit_info(self, path):
         return EditInfo(self, path)
 
+    def as_dict(self):
+        raise NotImplementedError()
+
 
 class NoRepoInfo(RepoInfo):
     """Missing repository information"""
@@ -84,6 +87,12 @@ class GithubRepoInfo(RepoInfo):
         else:
             path = relative_path(path)
             return urljoin(f'{self.base_url}/blob/{self.branch}/', str(path))
+
+    def as_dict(self):
+        return {
+            'url': self.base_url,
+            'branch': self.branch,
+        }
 
 
 class LocalRepoInfo(RepoInfo):

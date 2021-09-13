@@ -1,7 +1,7 @@
 $schema: http://dummy.test/schema/Course
 api_version:
 - 0
-- 3
+- 4
 course:
     default_time:
         end: '22:00'

@@ -1,0 +1,30 @@
+{
+    "api_version": [0, 4],
+    "course": {
+        "title": "Example course",
+        "sessions": [
+            {
+                "slug": "session1",
+                "title": "First session",
+                "materials": [
+                    {
+                        "lesson_slug": "lesson1",
+                        "type": "lesson"
+                    }
+                ]
+            }
+        ],
+        "lessons": {
+            "lesson1": {
+                "title": "Lesson with missing content",
+                "pages": {
+                    "index": {
+                        "attribution": [],
+                        "license": "cc0",
+                        "content": {"path": "nonexisting-file.html"}
+                    }
+                }
+            }
+        }
+    }
+}

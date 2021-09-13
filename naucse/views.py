@@ -106,9 +106,10 @@ def runs(year=None, all=None):
     # List of years to show in the pagination
     # If the current year is not there (no runs that start in the current year
     # yet), add it manually
-    all_years = sorted(g.model.explicit_run_years)
+    all_years = list(g.model.run_years)
     if today.year not in all_years:
         all_years.append(today.year)
+    all_years.sort()
     first_year, last_year = min(all_years), max(all_years)
 
     if year is not None:
@@ -220,7 +221,10 @@ def session(course_slug, session_slug, page_slug):
 def _get_canonicality_info(lesson):
     """Get canonical URL -- i.e., a lesson from 'lessons' with the same slug"""
     # XXX: This could be made much more fancy
-    lessons_course = g.model.get_course('lessons')
+    try:
+        lessons_course = g.model.get_course('lessons')
+    except KeyError:
+        return False, None
     is_canonical_lesson = (lessons_course == lesson.course)
     if is_canonical_lesson:
         canonical_url = None

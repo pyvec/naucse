@@ -1,0 +1,35 @@
+{
+    "api_version": [0, 4],
+    "course": {
+        "title": "Example course",
+        "sessions": [
+            {
+                "slug": "session1",
+                "title": "First session",
+                "materials": [
+                    {
+                        "lesson_slug": "lesson1",
+                        "type": "lesson"
+                    }
+                ]
+            }
+        ],
+        "lessons": {
+            "lesson1": {
+                "title": "Lesson with missing static page",
+                "pages": {
+                    "index": {
+                        "attribution": [],
+                        "license": "cc0",
+                        "content": "Some content"
+                    }
+                },
+                "static_files": {
+                    "helpful-diagram.png": {
+                        "path": "missing-file.png"
+                    }
+                }
+            }
+        }
+    }
+}
