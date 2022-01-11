@@ -3,7 +3,7 @@ api_version:
 - 0
 - 2
 course:
-    etag: 37ad00372570f60866db9ad090105740e2d799ac
+    etag: 23dd3b8d02e0c32169fc09b40d418e499e8ac72f
     lessons: {}
     long_description: ''
     sessions:

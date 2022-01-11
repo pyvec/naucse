@@ -1,4 +1,5 @@
 title: Test run with scheduled times
+timezone: Europe/Prague
 default_time:
   start: '19:00'
   end: '21:00'

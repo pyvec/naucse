@@ -83,6 +83,7 @@ def test_empty_course_from_renderer(model, assert_model_dump):
             'api_version': [0, 0],
             'course': {
                 'title': 'A minimal course',
+                'timezone': 'Europe/Prague',
                 'sessions': [],
                 'source_file': source,
             }
