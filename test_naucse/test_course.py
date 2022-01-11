@@ -181,10 +181,10 @@ def test_invalid_duplicate_session(model):
         load_course_from_fixture(model, 'course-data/invalid-duplicate-session.yml')
 
 
-def setup_compiled_renderer(model, tmp_path, fixture_name):
+def setup_compiled_renderer(model, tmp_path, fixture_name, branch='main'):
     repo_path = tmp_path / 'repo'
     shutil.copytree(fixture_path / fixture_name, repo_path)
-    subprocess.run(['git', 'init', '-b', 'main'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'init', '-b', branch], cwd=repo_path, check=True)
     subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
     subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
     subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
@@ -193,7 +193,7 @@ def setup_compiled_renderer(model, tmp_path, fixture_name):
     fetcher = compiled_renderer.Fetcher(repo_path=tmp_path / 'fetch_repo')
     renderer = compiled_renderer.CompiledRenderer(
         slug='test',
-        info={'url': str(repo_path), 'branch': 'main'},
+        info={'url': str(repo_path), 'branch': branch},
         fetcher=fetcher,
     )
     return renderer
@@ -202,6 +202,15 @@ def setup_compiled_renderer(model, tmp_path, fixture_name):
 def test_load_compiled_course(model, tmp_path):
     """Test that a compiled course can be loaded"""
     renderer = setup_compiled_renderer(model, tmp_path, 'compiled-course')
+    course = models.Course.from_renderer(parent=model, renderer=renderer)
+    assert str(course.lessons['lesson1'].pages['index'].content) == 'Content 1'
+    assert str(course.lessons['lesson2'].pages['index'].content) == 'Content 2\n'
+
+
+def test_load_compiled_course_from_branch_with_slash(model, tmp_path):
+    """Test that a compiled course can be loaded"""
+    renderer = setup_compiled_renderer(model, tmp_path, 'compiled-course',
+                                       branch='compiled/test')
     course = models.Course.from_renderer(parent=model, renderer=renderer)
     assert str(course.lessons['lesson1'].pages['index'].content) == 'Content 1'
     assert str(course.lessons['lesson2'].pages['index'].content) == 'Content 2\n'

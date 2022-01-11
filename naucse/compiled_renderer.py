@@ -147,7 +147,7 @@ class Fetcher:
         return GitPath(self.repo_path, self.get_ref(url, branch))
 
     def get_last_fetch_config_variable(self, url, branch):
-        return f'naucse.last_fetch.{git_identifer(url)}.{branch}'
+        return f'naucse.last_fetch.{git_identifer(url)}.{git_identifer(branch)}'
 
     def filter_branches_to_fetch(self, url, branches, *, now):
         result = []
