@@ -983,8 +983,6 @@ class Root(Model):
         schema_url_factory=None,
         renderers={},
         repo_info=None,
-        # Overrides for tests:
-        trusted_repo_patterns=None,
     ):
         self.root = self
         self.url_factories = url_factories or {}
@@ -998,17 +996,6 @@ class Root(Model):
         self.self_study_courses = {}
 
         self._repo_info_override = repo_info
-
-        # Repos we trust for code execution
-        if trusted_repo_patterns is None:
-            trusted = os.environ.get(
-                'NAUCSE_TRUSTED_REPOS', None
-            )
-            if trusted is not None:
-                trusted_repo_patterns = tuple(
-                    line for line in trusted.split() if line
-                )
-        self.trusted_repo_patterns = trusted_repo_patterns or ()
 
     pk_name = None
 

@@ -36,16 +36,6 @@ See [Elsa](https://pypi.org/project/elsa/) for other usage, including
 deployment to GitHub Pages.
 
 
-## External courses
-
-Courses may be rendered from external repositories.
-This is a security risk, so such courses are disabled by default.
-Set `NAUCSE_TRUSTED_REPOS` to a space-separated globs of repository URLs
-to allow. The URLS have a `#branch` fragment.
-In an isolated environment, you can set `NAUCSE_TRUSTED_REPOS` to `*`
-
-
-
 ## Tests
 
 Tests can be run using `tox`:
