@@ -36,6 +36,30 @@ See [Elsa](https://pypi.org/project/elsa/) for other usage, including
 deployment to GitHub Pages.
 
 
+## Served courses
+
+The courses on the served website are taken from two sources:
+
+- `courses.yml` in `$NAUCSE_ROOT_PATH`, with entries like:
+
+  ```yaml
+    course_slug:
+        url: https://github.com/user/repo
+        branch: main
+        path: _compiled
+  ```
+
+  The named repositories will be cloned. At the given path in the given branch,
+  naucse expects compiled course info, as prepared by
+  `python -m naucse_render compile`.
+
+  This is intended for the production site, which aggregates lots of individual
+  courses.
+
+- Any courses found by `python -m naucse_render ls`.
+  This is useful when developing a course locally.
+
+
 ## Tests
 
 Tests can be run using `tox`:
