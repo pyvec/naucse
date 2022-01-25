@@ -241,15 +241,14 @@ def test_fork_link(arca_model, content_repo, tmp_path, slug, assert_model_dump):
     make_data_with_fork_link(
         tmp_path, LINK_INFO[slug]["path"], json.dumps(link_info),
     )
-    arca_model.load_local_courses(tmp_path / 'data')
-    course = arca_model.courses[slug]
-    assert_model_dump(course, LINK_INFO[slug]['expected_file'])
+    with pytest.raises(ValueError, match='"link.yml"'):
+        arca_model.load_local_courses(tmp_path / 'data')
 
 
 def test_bad_fork_link(arca_model, content_repo, tmp_path):
     """Test that bad link.yml errors out"""
     make_data_with_fork_link(tmp_path, 'courses/bad', 'this is not a dict')
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError, match='"link.yml"'):
         arca_model.load_local_courses(tmp_path / 'data')
 
 
@@ -261,17 +260,8 @@ def test_untrusted(arca_model, git_command, content_repo, tmp_path, caplog):
     make_data_with_fork_link(
         tmp_path, 'courses/normal-course', json.dumps(link_info),
     )
-    arca_model.load_local_courses(tmp_path / 'data')
-
-    with caplog.at_level(logging.DEBUG):
-        assert 'courses/normal-course' not in arca_model.courses
-
-    print(caplog.records)
-    records = [r for r in caplog.records if r.msg.startswith('Untrusted')]
-
-    assert len(records) == 1
-    wanted_message = f'Untrusted repo: {content_repo.as_uri()}#master-untrusted'
-    assert wanted_message in records[0].msg
+    with pytest.raises(ValueError, match='"link.yml"'):
+        arca_model.load_local_courses(tmp_path / 'data')
 
 
 @pytest.mark.xfail(reason="Succeeds despite no naucse_render dependency")

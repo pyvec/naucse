@@ -4,6 +4,7 @@ import collections.abc
 import re
 import os
 import shutil
+from itertools import chain
 
 import yaml
 from arca import Arca
@@ -1056,69 +1057,31 @@ class Root(Model):
         """
         self.set_repo_info(get_local_repo_info(path))
 
-        self_study_course_path = path / 'courses'
-        run_path = path / 'runs'
-        lesson_path = path / 'lessons'
-        compiled_path = path / 'courses.yml'
-        local_course_path = path / 'course.yml'
-
-        def _load_local_course(course_path, slug, canonical_if_local=False):
-            link_path = course_path / 'link.yml'
-            if link_path.is_file():
-                with link_path.open() as f:
-                    link_info = yaml.safe_load(f)
-                try:
-                    renderer = arca_renderer.Renderer(
-                        self.arca,
-                        slug=slug,
-                        **link_info,
-                        trusted_repo_patterns=self.trusted_repo_patterns,
-                    )
-                    course = Course.from_renderer(
-                        parent=self, renderer=renderer,
-                    )
-                except UntrustedRepo as e:
-                    logger.debug(f'Untrusted repo: {e.url}')
-                else:
-                    self.add_course(course)
-            if (course_path / 'info.yml').is_file():
-                renderer = local_renderer.LocalRenderer(
-                    path=path,
-                    slug=slug,
-                    repo_info=self.repo_info,
-                )
-                course = Course.from_renderer(
-                    parent=self,
-                    canonical=canonical_if_local,
-                    renderer=renderer,
-                )
-                self.add_course(course)
-
-        if (local_course_path).is_file():
+        def _load_local_course(slug, **renderer_kwargs):
             renderer = local_renderer.LocalRenderer(
                 path=path,
-                slug='courses/local',
+                slug=slug,
                 repo_info=self.repo_info,
-                api_slug=None
+                **renderer_kwargs,
             )
             course = Course.from_renderer(parent=self, renderer=renderer)
             self.add_course(course)
 
-        if self_study_course_path.exists():
-            for course_path in self_study_course_path.iterdir():
-                slug = 'courses/' + course_path.name
-                _load_local_course(course_path, slug, canonical_if_local=True)
-        else:
-            logger.warning(f'No courses at {self_study_course_path}')
+        for slug in local_renderer.get_course_slugs(path=path):
+            print(path, slug)
+            _load_local_course(slug)
 
-        if run_path.exists():
-            for year_path in sorted(run_path.iterdir()):
-                if year_path.is_dir():
-                    for course_path in year_path.iterdir():
-                        slug = f'{year_path.name}/{course_path.name}'
-                        _load_local_course(course_path, slug)
+        for link_path in chain(
+            path.glob('courses/**/link.yml'),
+            path.glob('runs/**/link.yml'),
+        ):
+            raise ValueError(
+                '"link.yml" files are not supported since naucse 5.0'
+            )
 
+        compiled_path = path / 'courses.yml'
         fetcher = compiled_renderer.Fetcher()
+        featured_courses = []
         if compiled_path.exists():
             with compiled_path.open() as f:
                 courses_info = yaml.safe_load(f)
@@ -1127,35 +1090,17 @@ class Root(Model):
                     slug, course_info,
                     fetcher=fetcher,
                 )
-                self.add_course(Course.from_renderer(
+                course = Course.from_renderer(
                     renderer=renderer,
                     parent=self,
-                ))
-
-        if lesson_path.exists():
-            renderer = local_renderer.LocalRenderer(
-                path=path,
-                slug='lessons',
-                repo_info=self.repo_info,
-            )
-            self.add_course(Course.from_renderer(
-                canonical=True,
-                parent=self,
-                renderer=renderer,
-            ))
-        else:
-            logger.warning(f'No lessons at {lesson_path}')
-
-        self_study_order_path = self_study_course_path / 'info.yml'
-        if self_study_order_path.exists():
-            with (path / 'courses/info.yml').open() as f:
-                course_info = yaml.safe_load(f)
-            self.featured_courses = [
-                self.courses[f'courses/{n}'] for n in course_info['order']
-            ]
-        else:
-            logger.warning(f'No featured courses at {self_study_order_path}')
-            self.featured_courses = list(self.courses.values())
+                    canonical=course_info.get('canonical', False),
+                )
+                self.add_course(course)
+                feature_index = course_info.get('featured', None)
+                if feature_index is not None:
+                    featured_courses.append((feature_index, slug, course))
+        # Sort featured courses by their index
+        self.featured_courses = [c for i, s, c in sorted(featured_courses)]
 
     def add_course(self, course):
         slug = course.slug

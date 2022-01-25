@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import shutil
 import os
 
 import pytest
@@ -52,14 +54,12 @@ def test_load_empty_dir():
 
 
 def test_no_courses():
-    """Loading directory with no courses gives only an empty "lessons" course
+    """Loading directory with no courses succeeds, but gives no course
     """
     model = models.Root()
     model.load_local_courses(fixture_path / 'empty-lessons-dir')
 
-    assert sorted(model.courses) == ['lessons']
-    assert not model.courses['lessons'].sessions
-    assert not model.courses['lessons'].lessons
+    assert sorted(model.courses) == []
 
 
 def test_load_courses():
@@ -67,15 +67,14 @@ def test_load_courses():
     model.load_local_courses(fixture_path / 'minimal-courses')
 
     assert sorted(model.courses) == [
-        '2019/minimal', 'courses/minimal', 'lessons',
+        '2019/minimal', '2019/minimal-flat',
+        'courses/minimal', 'courses/minimal-flat',
     ]
 
     assert model.courses['courses/minimal'].title == 'A minimal course'
     assert model.courses['courses/minimal'].slug == 'courses/minimal'
     assert model.courses['2019/minimal'].title == 'A minimal course'
     assert model.courses['2019/minimal'].slug == '2019/minimal'
-    assert model.courses['lessons'].title == 'Kanonické lekce'
-    assert model.courses['lessons'].slug == 'lessons'
 
 
 def test_from_renderer():
@@ -95,6 +94,29 @@ def test_from_renderer():
 
     assert model.courses['courses/minimal'].title == 'A minimal course'
     assert model.courses['courses/minimal'].slug == 'courses/minimal'
+
+
+def test_lessons_slug():
+    """Test that an arbitrary course can have the slug 'lessons',
+    which used to be special
+    """
+    model = models.Root()
+    path = fixture_path / 'minimal-courses'
+    renderer = LocalRenderer(
+        path=path,
+        repo_info=get_local_repo_info(path),
+        slug='lessons',
+        api_slug='courses/minimal',
+    )
+    model.add_course(models.Course.from_renderer(
+        parent=model,
+        renderer=renderer,
+    ))
+
+    assert sorted(model.courses) == ['lessons']
+
+    assert model.courses['lessons'].slug == 'lessons'
+    assert model.courses['lessons'].title == 'A minimal course'
 
 
 def test_dump_local_course(model, assert_model_dump):
@@ -207,3 +229,54 @@ def test_run_years(model, assert_model_dump):
     assert_model_dump(model, 'run-years/root')
     for year, run_year in model.run_years.items():
         assert_model_dump(run_year, f'run-years/{year}')
+
+
+def test_load_courses_yml(model, tmp_path):
+    """Test loading compiled courses from courses.yml"""
+    fixture_name = 'compiled-course'
+    def setup_repo(dirname, branch='main'):
+        repo_path = tmp_path / 'repos' / dirname
+        shutil.copytree(fixture_path / fixture_name, repo_path)
+        subprocess.run(['git', 'init', '-b', branch], cwd=repo_path, check=True)
+        subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
+        subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)
+    setup_repo('basic')
+    setup_repo('branch-trunk', 'trunk')
+
+    with (tmp_path / 'courses.yml').open('w') as f:
+        yaml.dump({
+            'courses/basic': {
+                'url': str(tmp_path / 'repos/basic'),
+                'branch': 'main',
+                'featured': 1,
+                'canonical': True,
+            },
+            'courses/branch': {
+                'url': str(tmp_path / 'repos/branch-trunk'),
+                'branch': 'trunk',
+                'canonical': True,
+            },
+            'courses/alternate': {
+                'url': str(tmp_path / 'repos/basic'),
+                'branch': 'main',
+                'featured': 2,
+            },
+            'lessons': {
+                'url': str(tmp_path / 'repos/basic'),
+                'branch': 'main',
+            },
+        }, f)
+
+    model.load_local_courses(tmp_path)
+    assert sorted(model.courses) == [
+        'courses/alternate', 'courses/basic', 'courses/branch', 'lessons',
+    ]
+    assert [c.slug for c in model.featured_courses] == [
+        'courses/basic', 'courses/alternate',
+    ]
+    assert model.courses['courses/alternate'].canonical == False
+    assert model.courses['courses/basic'].canonical == True
+    assert model.courses['courses/branch'].canonical == True
+    assert model.courses['lessons'].canonical == False

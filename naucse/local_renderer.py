@@ -46,3 +46,5 @@ class LocalRenderer:
 
     def get_repo_info(self):
         return self.repo_info
+
+get_course_slugs = naucse_render.get_course_slugs
