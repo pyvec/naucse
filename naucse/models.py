@@ -7,7 +7,6 @@ import shutil
 from itertools import chain
 
 import yaml
-from arca import Arca
 
 from naucse.edit_info import get_local_repo_info, get_repo_info
 from naucse.converters import Field, VersionField, register_model
@@ -20,7 +19,7 @@ from naucse.datetimes import SessionTimeConverter, DateConverter
 from naucse.datetimes import ZoneInfoConverter, TimeIntervalConverter
 from naucse.datetimes import fix_session_time, _OLD_DEFAULT_TIMEZONE
 from naucse.exceptions import UntrustedRepo
-from naucse import arca_renderer, local_renderer, compiled_renderer
+from naucse import local_renderer, compiled_renderer
 
 
 API_VERSION = 0, 4
@@ -985,7 +984,6 @@ class Root(Model):
         renderers={},
         repo_info=None,
         # Overrides for tests:
-        arca=None,
         trusted_repo_patterns=None,
     ):
         self.root = self
@@ -1011,24 +1009,6 @@ class Root(Model):
                     line for line in trusted.split() if line
                 )
         self.trusted_repo_patterns = trusted_repo_patterns or ()
-
-        # Arca object for the Arca backend
-        if arca is None:
-            arca = Arca(settings={
-                "ARCA_BACKEND": "arca.backend.CurrentEnvironmentBackend",
-                "ARCA_BACKEND_CURRENT_ENVIRONMENT_REQUIREMENTS": "requirements.txt",
-                "ARCA_BACKEND_VERBOSITY": 2,
-                "ARCA_BACKEND_KEEP_CONTAINER_RUNNING": True,
-                "ARCA_BACKEND_USE_REGISTRY_NAME": "docker.io/naucse/naucse.python.cz",
-                "ARCA_SINGLE_PULL": True,
-                "ARCA_IGNORE_CACHE_ERRORS": True,
-                "ARCA_CACHE_BACKEND": "dogpile.cache.dbm",
-                "ARCA_CACHE_BACKEND_ARGUMENTS": {
-                    "filename": ".arca/cache/naucse.dbm"
-                },
-                "ARCA_BASE_DIR": str(Path('.arca').resolve()),
-            })
-        self.arca = arca
 
     pk_name = None
 

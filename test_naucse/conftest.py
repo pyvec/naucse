@@ -37,7 +37,7 @@ class DummyURLFactories:
 class DummyRenderer:
     """Renderer that returns courses/lessons from the given data
 
-    Mocks the get_lessons method of naucse_render or arca_renderer.Renderer.
+    Mocks the get_lessons method of a renderer.
 
     As `course`, DummyRenderer expects a full API response, complete with
     api_version.

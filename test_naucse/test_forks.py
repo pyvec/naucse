@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 import yaml
 from flask.testing import FlaskClient
-from git import Repo
 
 from naucse import models
 

@@ -19,8 +19,6 @@ from collections import namedtuple
 from pathlib import Path
 from urllib.parse import urljoin
 
-from git import Repo
-
 from naucse.logger import logger
 
 
