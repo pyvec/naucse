@@ -42,10 +42,10 @@ def _get_model():
 
     # (Re-)initialize model
 
-    load_path = Path(os.environ.get('NAUCSE_ROOT_PATH', '.'))
+    g.model_load_path = Path(os.environ.get('NAUCSE_ROOT_PATH', '.'))
 
     g.model.load_licenses(Path(app.root_path) / 'licenses')
-    g.model.load_local_courses(load_path)
+    g.model.load_local_courses(g.model_load_path)
 
     if freezing:
         g.model.freeze()
@@ -84,7 +84,13 @@ setup_jinja_env(app.jinja_env)
 
 @app.route('/')
 def index():
-    return render_template("index.html", edit_info=g.model.edit_info)
+    if g.model.aggregates_courses:
+        return render_template("index.html", edit_info=g.model.edit_info)
+    else:
+        return render_template(
+            "dev_course_list.html",
+            load_path=g.model_load_path.resolve(),
+        )
 
 
 @app.route('/courses/')

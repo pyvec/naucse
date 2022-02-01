@@ -1,0 +1,21 @@
+{% extends '_course_list.html' %}
+
+{% block title %}Kurzy{% endblock title %}
+
+{% block intro %}
+
+    <p>Kurzy nalezené v <code>{{load_path}}</code>:</p>
+
+{% endblock %}
+
+
+{% block list %}
+
+    {% for course in g.model.courses.values() %}
+        <div class="section{{ loop.index }}">
+            <h4><a href="{{ course.get_url() }}">{{ course.title }}</a></h4>
+            <p><code>{{ course.slug }}</code> — {{ course.description }}</p>
+        </div>
+    {% endfor %}
+
+{% endblock %}

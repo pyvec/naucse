@@ -999,6 +999,9 @@ class Root(Model):
 
     pk_name = None
 
+    # If true, show a pretty homepage rather than a list of courses.
+    aggregates_courses = False
+
     self_study_courses = Field(
         AbbreviatedDictConverter(Course),
         doc="""Links to "canonical" courses – ones without a time span""")
@@ -1050,6 +1053,7 @@ class Root(Model):
         fetcher = compiled_renderer.Fetcher()
         featured_courses = []
         if compiled_path.exists():
+            self.aggregates_courses = True
             with compiled_path.open() as f:
                 courses_info = yaml.safe_load(f)
             for slug, course_info in courses_info.items():

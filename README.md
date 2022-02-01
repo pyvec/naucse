@@ -56,6 +56,9 @@ The courses on the served website are taken from two sources:
   This is intended for the production site, which aggregates lots of individual
   courses.
 
+  If `courses.yml` is present, naucse will use a pretty homepage
+  (rather than listing all courses on the homepage).
+
 - Any courses found by `python -m naucse_render ls`.
   This is useful when developing a course locally.
 
