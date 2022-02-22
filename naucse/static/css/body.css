@@ -24,6 +24,19 @@ p kbd {
     box-shadow:inset 0px 1px 0px 0px #fff;
 }
 
+.header-link {
+    /* Use opacity:0 rather than visibility:hidden to keep the link available
+     * for tab-navigation. */
+    opacity: 0;
+}
+.header-link:focus,
+*:focus-within > .header-link,
+*:hover > .header-link {
+    visibility: visible;
+    opacity: 1;
+}
+
+
 /*** Credits ***/
 
 .lesson-attribution {
