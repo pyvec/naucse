@@ -1,3 +1,7 @@
+## 0.5.2 (2022-03-01)
+
+- Add styling for header links
+
 ## 0.5.1 (2022-02-15)
 
 - Add a course development homepage
