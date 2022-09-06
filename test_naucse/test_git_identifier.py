@@ -29,9 +29,9 @@ def test_git_identifers_different(text1, text2):
 
 @pytest.mark.parametrize(('input', 'output'), (
     ('simple', 'simple'),
-    ('CaPiTaL', 'x-c43a-c50i-c54a-c4c'),
-    ('→Fünny 😸 letters\0!', 'x-u2192-c46-cfcnny-c20-v0001f638-c20letters-c00-c21'),
-    ('yap:/foo.bar/a-b_c/', 'yap-m-sfoo-pbar-sa-db-rc-s'),
+    ('CaPiTaL', 'x-a-i-a--c43c50c54c4c'),
+    ('→Fünny 😸 letters\0!', 'x---nny---letters---u2192c46cfcc20v0001f638c20c00c21'),
+    ('yap://foo.bar/some-words_here/', 'yap---foo-bar-some-words-here--msspsdrs'),
 ))
 def test_git_identifer_example(input, output):
     assert git_identifer(input) == output
