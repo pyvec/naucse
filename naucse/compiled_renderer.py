@@ -194,14 +194,14 @@ def git_identifer(string):
             return result
         num = ord(char)
         if num < 2**8:
-            return '-c{num:02x}'
+            return f'-c{num:02x}'
         if num < 2**16:
-            return '-u{num:04x}'
+            return f'-u{num:04x}'
         if num < 2**32:
-            return '-v{num:016x}'
+            return f'-v{num:08x}'
         raise ValueError('char to big')
     result = re.sub('[^a-z0-9]', replacement, string)
-    if re.match('^[a-z]', result):
+    if re.match('^[a-z]', result) and not result.startswith('x'):
         return result
     else:
         return 'x' + result
