@@ -18,7 +18,7 @@ def test_git_identifer_valid(text):
 
 
 @given(text(), text())
-@example('0', 'x0')
+@example('0', 'x0')  # regression test (these used to give the same result)
 def test_git_identifers_different(text1, text2):
     """Identifiers from different strings must be different"""
     if text1 == text2:
