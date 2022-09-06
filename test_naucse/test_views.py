@@ -1,7 +1,7 @@
 import pytest
 import yaml
 
-from naucse.views import app
+from naucse.views import make_app
 
 from test_naucse.conftest import fixture_path
 
@@ -9,6 +9,7 @@ from test_naucse.conftest import fixture_path
 def client(monkeypatch):
     monkeypatch.setenv('NAUCSE_ROOT_PATH', fixture_path / 'test_content')
 
+    app = make_app()
     app.config['DEBUG'] = True
 
     with app.test_client() as client:

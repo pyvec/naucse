@@ -12,44 +12,60 @@ from naucse import models
 from naucse.urlconverters import register_url_converters, DEFAULT_COURSE_SLUG
 from naucse.templates import setup_jinja_env
 
-app = Flask('naucse')
-app.config['JSON_AS_ASCII'] = False
+routes = []
+def route(*args, **kwargs):
+    def decorator(func):
+        routes.append((args, kwargs, func))
+        return func
+    return decorator
 
 
-@app.before_request
-def _get_model():
-    """Set `g.model` to the root of the naucse model
+def make_app():
+    app = Flask('naucse')
+    app.config['JSON_AS_ASCII'] = False
 
-    A single model is used (and stored in app config).
+    register_url_converters(app)
+    setup_jinja_env(app.jinja_env)
 
-    In debug mode (elsa serve), the model is re-initialized for each request,
-    so changes are picked up.
+    for args, kwargs, func in routes:
+        app.route(*args, **kwargs)(func)
 
-    In non-debug mode (elsa freeze), the model is initialized once, and
-    frozen (so all course data is requested and rendered upfront).
-    """
-    freezing = os.environ.get('NAUCSE_FREEZE', not app.config['DEBUG'])
-    initialize = True
+    @app.before_request
+    def _get_model():
+        """Set `g.model` to the root of the naucse model
 
-    try:
-        g.model = app.config['NAUCSE_MODEL']
-    except KeyError:
-        g.model = init_model()
-        app.config['NAUCSE_MODEL'] = g.model
-    else:
+        A single model is used (and stored in app config).
+
+        In debug mode (elsa serve), the model is re-initialized for each request,
+        so changes are picked up.
+
+        In non-debug mode (elsa freeze), the model is initialized once, and
+        frozen (so all course data is requested and rendered upfront).
+        """
+        freezing = os.environ.get('NAUCSE_FREEZE', not app.config['DEBUG'])
+        initialize = True
+
+        try:
+            g.model = app.config['NAUCSE_MODEL']
+        except KeyError:
+            g.model = init_model()
+            app.config['NAUCSE_MODEL'] = g.model
+        else:
+            if freezing:
+                # Model already initialized; don't look for changes
+                return
+
+        # (Re-)initialize model
+
+        g.model_load_path = Path(os.environ.get('NAUCSE_ROOT_PATH', '.'))
+
+        g.model.load_licenses(Path(app.root_path) / 'licenses')
+        g.model.load_local_courses(g.model_load_path)
+
         if freezing:
-            # Model already initialized; don't look for changes
-            return
+            g.model.freeze()
 
-    # (Re-)initialize model
-
-    g.model_load_path = Path(os.environ.get('NAUCSE_ROOT_PATH', '.'))
-
-    g.model.load_licenses(Path(app.root_path) / 'licenses')
-    g.model.load_local_courses(g.model_load_path)
-
-    if freezing:
-        g.model.freeze()
+    return app
 
 
 def init_model():
@@ -86,11 +102,7 @@ def url_for(endpoint, **kw):
     return flask.url_for(endpoint, **kw)
 
 
-register_url_converters(app)
-setup_jinja_env(app.jinja_env)
-
-
-@app.route('/')
+@route('/')
 def index():
     if g.model.aggregates_courses:
         return render_template("index.html", edit_info=g.model.edit_info)
@@ -101,7 +113,7 @@ def index():
         )
 
 
-@app.route('/courses/')
+@route('/courses/')
 def courses():
     return render_template(
         "course_list.html",
@@ -110,9 +122,9 @@ def courses():
     )
 
 
-@app.route('/runs/')
-@app.route('/<int:year>/')
-@app.route('/runs/<any(all):all>/')
+@route('/runs/')
+@route('/<int:year>/')
+@route('/runs/<any(all):all>/')
 def runs(year=None, all=None):
     # XXX: Simplify?
     today = datetime.date.today()
@@ -184,7 +196,7 @@ def runs(year=None, all=None):
     )
 
 
-@app.route('/<course:course_slug>/')
+@route('/<course:course_slug>/')
 def course(course_slug, year=None):
     try:
         course = g.model.courses[course_slug]
@@ -202,9 +214,9 @@ def course(course_slug, year=None):
     )
 
 
-@app.route('/<course:course_slug>/sessions/<session_slug>/',
+@route('/<course:course_slug>/sessions/<session_slug>/',
               defaults={'page_slug': 'front'})
-@app.route('/<course:course_slug>/sessions/<session_slug>/<page_slug>/')
+@route('/<course:course_slug>/sessions/<session_slug>/<page_slug>/')
 def session(course_slug, session_slug, page_slug):
     try:
         course = g.model.courses[course_slug]
@@ -251,9 +263,9 @@ def _get_canonicality_info(lesson):
     return is_canonical_lesson, canonical_url
 
 
-@app.route('/<course:course_slug>/<lesson:lesson_slug>/',
+@route('/<course:course_slug>/<lesson:lesson_slug>/',
               defaults={'page_slug': 'index'})
-@app.route('/<course:course_slug>/<lesson:lesson_slug>/<page_slug>/')
+@route('/<course:course_slug>/<lesson:lesson_slug>/<page_slug>/')
 def page(course_slug, lesson_slug, page_slug='index'):
     try:
         course = g.model.courses[course_slug]
@@ -276,7 +288,7 @@ def page(course_slug, lesson_slug, page_slug='index'):
     )
 
 
-@app.route('/<course:course_slug>/<lesson:lesson_slug>/<page_slug>'
+@route('/<course:course_slug>/<lesson:lesson_slug>/<page_slug>'
               + '/solutions/<int:solution_index>/')
 def solution(course_slug, lesson_slug, page_slug, solution_index):
     try:
@@ -302,7 +314,7 @@ def solution(course_slug, lesson_slug, page_slug, solution_index):
     )
 
 
-@app.route('/<course:course_slug>/<lesson:lesson_slug>/static/<path:filename>')
+@route('/<course:course_slug>/<lesson:lesson_slug>/static/<path:filename>')
 def page_static(course_slug, lesson_slug, filename):
     try:
         course = g.model.courses[course_slug]
@@ -332,7 +344,7 @@ def list_months(start_date, end_date):
     return months
 
 
-@app.route('/<course:course_slug>/calendar/')
+@route('/<course:course_slug>/calendar/')
 def course_calendar(course_slug):
     try:
         course = g.model.courses[course_slug]
@@ -357,7 +369,7 @@ def course_calendar(course_slug):
     )
 
 
-@app.route('/<course:course_slug>/calendar.ics')
+@route('/<course:course_slug>/calendar.ics')
 def course_calendar_ics(course_slug):
     try:
         course = g.model.courses[course_slug]
@@ -388,8 +400,8 @@ def course_calendar_ics(course_slug):
     return Response(str(cal), mimetype="text/calendar")
 
 
-@app.route('/v0/schema/<is_input:is_input>.json', defaults={'model_slug': 'root'})
-@app.route('/v0/schema/<is_input:is_input>/<model_slug>.json')
+@route('/v0/schema/<is_input:is_input>.json', defaults={'model_slug': 'root'})
+@route('/v0/schema/<is_input:is_input>/<model_slug>.json')
 def schema(model_slug, is_input):
     try:
         cls = models.models[model_slug]
@@ -400,12 +412,12 @@ def schema(model_slug, is_input):
     ))
 
 
-@app.route('/v0/naucse.json')
+@route('/v0/naucse.json')
 def api():
     return jsonify(models.dump(g.model, version=models.API_VERSION))
 
 
-@app.route('/v0/years/<int:year>.json')
+@route('/v0/years/<int:year>.json')
 def run_year_api(year):
     try:
         run_year = g.model.run_years[year]
@@ -414,7 +426,7 @@ def run_year_api(year):
     return jsonify(models.dump(run_year, version=models.API_VERSION))
 
 
-@app.route('/v0/<course:course_slug>.json')
+@route('/v0/<course:course_slug>.json')
 def course_api(course_slug):
     try:
         course = g.model.courses[course_slug]
