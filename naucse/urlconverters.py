@@ -22,17 +22,18 @@ DEFAULT_COURSE_SLUG = '+default'
 
 @_converter('course')
 class CourseConverter(BaseConverter):
-    regex = r'(([0-9]{4}|course)/[^/]+)|lessons|' + re.escape(DEFAULT_COURSE_SLUG)
+    part_isolating = False
+    regex = r'(?:(?:[0-9]{4}|course)/[^/]+)|lessons|' + re.escape(DEFAULT_COURSE_SLUG)
 
     # XXX: The URLs should really be "courses/<...>",
     # but we don't have good redirects yet,, so leave them at
     # "course/<...>"
 
     def to_python(self, value):
-        if value.startswith('course/'):
-            value = value.replace('course/', 'courses/')
         if value == DEFAULT_COURSE_SLUG:
             return None
+        if value.startswith('course/'):
+            value = value.replace('course/', 'courses/')
         return value
 
     def to_url(self, value):
@@ -45,7 +46,8 @@ class CourseConverter(BaseConverter):
 
 @_converter('lesson')
 class LessonConverter(BaseConverter):
-    regex = r'[^/]+/[^/]+'
+    part_isolating = False
+    regex = r'(?:[^/]+/[^/]+)'
 
     def to_python(self, value):
         return value
@@ -56,7 +58,7 @@ class LessonConverter(BaseConverter):
 
 @_converter('is_input')
 class IsInputConverter(BaseConverter):
-    regex = r'in|out'
+    regex = r'(?:in|out)'
 
     def to_python(self, value):
         return (value == 'in')
