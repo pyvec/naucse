@@ -1,0 +1,7 @@
+title: A top-level course
+timezone: Europe/Prague
+sessions:
+- title: A test session
+  slug: test-session
+  materials:
+  - lesson: test/test

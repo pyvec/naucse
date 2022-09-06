@@ -23,6 +23,7 @@ def route(*args, **kwargs):
 def make_app():
     app = Flask('naucse')
     app.config['JSON_AS_ASCII'] = False
+    app.config['TRAP_HTTP_EXCEPTIONS'] = True
 
     register_url_converters(app)
     setup_jinja_env(app.jinja_env)
