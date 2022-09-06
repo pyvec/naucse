@@ -1,6 +1,4 @@
 from pathlib import Path
-import subprocess
-import shutil
 
 import pytest
 import yaml
@@ -12,7 +10,7 @@ from naucse.converters import DuplicateKeyError
 from naucse.local_renderer import LocalRenderer
 from naucse import compiled_renderer
 
-from test_naucse.conftest import add_test_course, fixture_path
+from test_naucse.conftest import add_test_course, fixture_path, setup_repo
 from test_naucse.conftest import DummyRenderer, DummyLessonNotFound
 from test_naucse.conftest import api_versions_since
 
@@ -184,12 +182,7 @@ def test_invalid_duplicate_session(model):
 
 def setup_compiled_renderer(model, tmp_path, fixture_name, branch='main'):
     repo_path = tmp_path / 'repo'
-    shutil.copytree(fixture_path / fixture_name, repo_path)
-    subprocess.run(['git', 'init', '-b', branch], cwd=repo_path, check=True)
-    subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
-    subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)
+    setup_repo(fixture_path / fixture_name, repo_path, branch)
 
     fetcher = compiled_renderer.Fetcher(repo_path=tmp_path / 'fetch_repo')
     renderer = compiled_renderer.CompiledRenderer(
