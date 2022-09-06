@@ -17,9 +17,12 @@ def register_url_converters(app):
     for name, cls in _converters.items():
         app.url_map.converters[name] = cls
 
+
+DEFAULT_COURSE_SLUG = '+default'
+
 @_converter('course')
 class CourseConverter(BaseConverter):
-    regex = r'(([0-9]{4}|course)/[^/]+)|lessons'
+    regex = r'(([0-9]{4}|course)/[^/]+)|lessons|' + re.escape(DEFAULT_COURSE_SLUG)
 
     # XXX: The URLs should really be "courses/<...>",
     # but we don't have good redirects yet,, so leave them at
@@ -28,9 +31,13 @@ class CourseConverter(BaseConverter):
     def to_python(self, value):
         if value.startswith('course/'):
             value = value.replace('course/', 'courses/')
+        if value == DEFAULT_COURSE_SLUG:
+            return None
         return value
 
     def to_url(self, value):
+        if value is None:
+            return DEFAULT_COURSE_SLUG
         if value.startswith('courses/'):
             return value.replace('courses/', 'course/', 1)
         return value

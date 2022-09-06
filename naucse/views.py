@@ -3,12 +3,13 @@ from pathlib import Path, PurePosixPath
 import calendar
 import os
 
-from flask import Flask, render_template, jsonify, url_for, Response, abort, g, redirect
+from flask import Flask, render_template, jsonify, Response, abort, g, redirect
 from flask import send_file
+import flask
 import ics
 
 from naucse import models
-from naucse.urlconverters import register_url_converters
+from naucse.urlconverters import register_url_converters, DEFAULT_COURSE_SLUG
 from naucse.templates import setup_jinja_env
 
 app = Flask('naucse')
@@ -76,6 +77,13 @@ def init_model():
             'schema', model_slug=m.model_slug,
             is_input=is_input, **kw),
     )
+
+def url_for(endpoint, **kw):
+    # Flask treats `None` URL parameters as missing.
+    # So, we inline a bit of CourseConverter.to_url here.
+    if kw.get('course_slug', '') is None:
+        kw['course_slug'] = DEFAULT_COURSE_SLUG
+    return flask.url_for(endpoint, **kw)
 
 
 register_url_converters(app)
