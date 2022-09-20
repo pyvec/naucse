@@ -1,3 +1,11 @@
+## 0.5.3 (2022-09-20)
+
+- Expose the default course as `/courses/+default/`
+- Fix rendering from Git URLs that use uppercase letters (and several more
+  unusual kinds of characters).
+- Fix styling of `<kbd>`
+- Update to work with Werkzeug 2.2.0+
+
 ## 0.5.2 (2022-03-01)
 
 - Add styling for header links
