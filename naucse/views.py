@@ -23,6 +23,9 @@ def route(*args, **kwargs):
 def make_app():
     app = Flask('naucse')
     app.config['JSON_AS_ASCII'] = False
+
+    # As long as we deploy a frozen app, we want to raise exceptions rather
+    # than serve error response pages.
     app.config['TRAP_HTTP_EXCEPTIONS'] = True
 
     register_url_converters(app)

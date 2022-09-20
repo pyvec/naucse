@@ -10,6 +10,8 @@ def client(monkeypatch):
     monkeypatch.setenv('NAUCSE_ROOT_PATH', str(fixture_path / 'test_content'))
 
     app = make_app()
+
+    # Make debugging easier
     app.config['DEBUG'] = True
     app.config['TRAP_HTTP_EXCEPTIONS'] = True
 
