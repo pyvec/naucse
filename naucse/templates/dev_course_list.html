@@ -14,7 +14,15 @@
     {% for course in g.model.courses.values() %}
         <div class="section{{ loop.index }}">
             <h4><a href="{{ course.get_url() }}">{{ course.title }}</a></h4>
-            <p><code>{{ course.slug }}</code> — {{ course.description }}</p>
+            <p>
+                {% if course.slug %}
+                    <code>{{ course.slug }}</code>
+                    {% if course.description %} — {% endif %}
+                {% endif %}
+                {% if course.description %}
+                    {{ course.description }}
+                {% endif %}
+            </p>
         </div>
     {% endfor %}
 

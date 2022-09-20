@@ -1,4 +1,6 @@
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 import yaml
@@ -145,3 +147,12 @@ def add_test_course(model, slug, data, version=(0, 0)):
         renderer=renderer,
         parent=model,
     ))
+
+
+def setup_repo(content_source_path, repo_path, branch='main'):
+    shutil.copytree(content_source_path, repo_path)
+    subprocess.run(['git', 'init', '-b', branch], cwd=repo_path, check=True)
+    subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
+    subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)

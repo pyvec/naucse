@@ -1,5 +1,4 @@
 from pathlib import Path
-import subprocess
 import shutil
 import os
 
@@ -11,7 +10,7 @@ from naucse.edit_info import get_local_repo_info
 from naucse.local_renderer import LocalRenderer
 
 from test_naucse.conftest import fixture_path, dummy_schema_url_factory
-from test_naucse.conftest import add_test_course
+from test_naucse.conftest import add_test_course, setup_repo
 
 
 def test_empty_model():
@@ -234,16 +233,12 @@ def test_run_years(model, assert_model_dump):
 def test_load_courses_yml(model, tmp_path):
     """Test loading compiled courses from courses.yml"""
     fixture_name = 'compiled-course'
-    def setup_repo(dirname, branch='main'):
-        repo_path = tmp_path / 'repos' / dirname
-        shutil.copytree(fixture_path / fixture_name, repo_path)
-        subprocess.run(['git', 'init', '-b', branch], cwd=repo_path, check=True)
-        subprocess.run(['git', 'add', '.'], cwd=repo_path, check=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo_path, check=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@test'], cwd=repo_path, check=True)
-        subprocess.run(['git', 'commit', '-m', 'course'], cwd=repo_path, check=True)
-    setup_repo('basic')
-    setup_repo('branch-trunk', 'trunk')
+    setup_repo(fixture_path / fixture_name, tmp_path / 'repos' / 'basic')
+    setup_repo(
+        fixture_path / fixture_name,
+        tmp_path / 'repos' / 'branch-trunk',
+        branch='trunk',
+    )
 
     with (tmp_path / 'courses.yml').open('w') as f:
         yaml.dump({

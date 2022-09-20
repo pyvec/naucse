@@ -1,7 +1,7 @@
 import elsa
 
-from naucse.views import app
+from naucse.views import make_app
 
 
 def main():
-    elsa.cli(app, base_url='https://naucse.python.cz')
+    elsa.cli(make_app(), base_url='https://naucse.python.cz')
