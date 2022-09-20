@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naucse"
+version = "0.5.3"
+description = "Website for course materials"
+readme = "README.md"
+license = {file = "LICENSE.MIT"}
+dependencies = [
+    "elsa",
+    "ics",
+    "cssutils",
+    "PyYAML",
+    "Flask",
+    "Jinja2",
+    "Werkzeug >= 2.2.0",
+    "jsonschema",
+    "lxml",
+    "naucse-render >= 1.7",
+    'backports.zoneinfo; python_version<"3.9"',
+    'tzdata; sys_platform=="win32"',
+    "markupsafe",
+    "gitpathlib",
+]
+
+[project.urls]
+home = "https://github.com/pyvec/naucse"
+changelog = "https://github.com/pyvec/naucse/blob/master/CHANGELOG.md"
+
+[[project.authors]]
+name = "Petr Viktorin"
+email = "encukou@gmail.com"
+
+[[project.authors]]
+name = "naucse.python.cz contributors"
+
+[project.optional-dependencies]
+dev = ["tox", "pytest", "hypothesis"]
+test = ["pytest", "hypothesis"]
+
+[tool.setuptools]
+zip-safe = false
+packages = ["naucse"]
