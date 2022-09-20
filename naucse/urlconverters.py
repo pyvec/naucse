@@ -18,12 +18,12 @@ def register_url_converters(app):
         app.url_map.converters[name] = cls
 
 
-DEFAULT_COURSE_SLUG = '+default'
+DEFAULT_COURSE_SLUG = 'course/+default'
 
 @_converter('course')
 class CourseConverter(BaseConverter):
     part_isolating = False
-    regex = r'(?:(?:[0-9]{4}|course)/[^/]+)|lessons|' + re.escape(DEFAULT_COURSE_SLUG)
+    regex = r'(?:(?:[0-9]{4}|course)/[^/]+)|lessons'
 
     # XXX: The URLs should really be "courses/<...>",
     # but we don't have good redirects yet,, so leave them at
