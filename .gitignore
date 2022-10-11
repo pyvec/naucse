@@ -4,5 +4,6 @@ _build
 .arca
 .pytest_cache
 /.tox
+/build/
 /dist/
 /.hypothesis/
