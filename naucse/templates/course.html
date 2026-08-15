@@ -23,7 +23,7 @@
 {{ course.long_description }}
 {% for session in course.sessions.values() %}
 
-<div class="section{{ loop.index }}">
+<div class="section{{ loop.index }}" id="session-{{ session.slug }}">
     <h4>
         {% if session.serial != None %}
             Lekce {{ session.serial }} –
