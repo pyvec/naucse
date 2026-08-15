@@ -28,6 +28,8 @@ dependencies = [
 [project.urls]
 home = "https://github.com/pyvec/naucse"
 changelog = "https://github.com/pyvec/naucse/blob/master/CHANGELOG.md"
+source = "https://github.com/pyvec/naucse"
+issues = "https://github.com/pyvec/naucse/issues"
 
 [[project.authors]]
 name = "Petr Viktorin"
